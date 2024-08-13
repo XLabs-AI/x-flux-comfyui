@@ -268,7 +268,7 @@ class XlabsSampler:
         guidance=conditioning[0][1]['guidance']
         
         device=mm.get_torch_device()
-        dtype_model = model.model.diffusion_model.img_in.weight.dtype
+        dtype_model = torch.bfloat16
         offload_device=mm.unet_offload_device()
         
         torch.manual_seed(noise_seed)
