@@ -1,12 +1,13 @@
 import os
 import comfy.model_management as mm
+import comfy.model_patcher as mp
 from comfy.utils import ProgressBar
 import copy
 
 import folder_paths
 import torch
 #from .xflux.src.flux.modules.layers import DoubleStreamBlockLoraProcessor, DoubleStreamBlockProcessor
-from .xflux.src.flux.model import Flux as ModFlux
+#from .xflux.src.flux.model import Flux as ModFlux
 
 from .xflux.src.flux.util import (configs, load_ae, load_clip,
                             load_flow_model, load_t5, load_safetensors, load_flow_model_quintized, load_from_repo_id,
@@ -15,6 +16,8 @@ from .xflux.src.flux.util import (configs, load_ae, load_clip,
 
 from .utils import FluxUpdateModules, attn_processors, set_attn_processor, is_model_pathched, merge_loras, tensor_to_pil, LATENT_PROCESSOR_COMFY
 from .layers import DoubleStreamBlockLoraProcessor, DoubleStreamBlockProcessor, DoubleStreamBlockLorasMixerProcessor
+from .model_init import Flux as ModFlux
+from .model_init import double_blocks_init, single_blocks_init
 
 
 from comfy.utils import get_attr, set_attr
@@ -35,6 +38,7 @@ folder_paths.folder_names_and_paths["xlabs"] = ([dir_xlabs], folder_paths.suppor
 folder_paths.folder_names_and_paths["xlabs_loras"] = ([dir_xlabs_loras], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["xlabs_controlnets"] = ([dir_xlabs_controlnets], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["xlabs_flux"] = ([dir_xlabs_flux], folder_paths.supported_pt_extensions)
+folder_paths.folder_names_and_paths["xlabs_flux_json"] = ([dir_xlabs_flux], set({'.json',}))
 
 
 
@@ -256,7 +260,7 @@ class XlabsSampler:
 
     def sampling(self, model, conditioning, neg_conditioning, noise_seed, steps, timestep_to_start_cfg, true_gs, latent_image=None, controlnet_condition=None):
         
-        
+        mm.load_model_gpu(model)
         inmodel = model.model
         #print(conditioning[0][0].shape) #//t5
         #print(conditioning[0][1]['pooled_output'].shape) #//clip
@@ -281,7 +285,7 @@ class XlabsSampler:
                 1, height, width, device=device,
                 dtype=dtype_model, seed=noise_seed
             )
-        mm.load_model_gpu(inmodel)
+        
         timesteps = get_schedule(
             steps,
             (width // 8) * (height // 8) // (16 * 16)*2,
@@ -306,12 +310,10 @@ class XlabsSampler:
             )
         
         else:
-            
             controlnet = controlnet_condition['model']
             controlnet_image = controlnet_condition['img']
             controlnet.to(device, dtype=dtype_model)
             controlnet_image.to(device, dtype=dtype_model)
-            mm.load_model_gpu(controlnet)
             x = denoise_controlnet(
                 inmodel.diffusion_model, **inp_cond, controlnet=controlnet,
                 timesteps=timesteps, guidance=guidance,
@@ -332,48 +334,108 @@ class XlabsSampler:
         return (lat_ret,)
 
     
-    
-
+import json
+from optimum.quanto import requantize
+from safetensors.torch import load_file as load_sft
 class LoadFluxModel:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
                             #"model_name": (["flux-dev", "flux-dev-fp8", "flux-schnell"],),
                             "model_path": (
-                                folder_paths.get_filename_list("xlabs_flux") +
-                                folder_paths.get_filename_list("checkpoints") +
-                                folder_paths.get_filename_list("unet")
+                                folder_paths.get_filename_list("xlabs_flux") 
+                                #+folder_paths.get_filename_list("checkpoints")
+                                #+folder_paths.get_filename_list("unet")
                                             ,),
                             "config_path": (
-                                folder_paths.get_filename_list("xlabs_flux") +
-                                folder_paths.get_filename_list("checkpoints") +
-                                folder_paths.get_filename_list("unet")
+                                folder_paths.get_filename_list("xlabs_flux_json") 
+                                #+folder_paths.get_filename_list("checkpoints")
+                                #+folder_paths.get_filename_list("unet")
                                             ,),
                               }}
 
-    RETURN_TYPES = ("FLUXMODEL",)
-    RETURN_NAMES = ("FluxModel",)
+    RETURN_TYPES = ("MODEL",)
+    RETURN_NAMES = ("model",)
     FUNCTION = "loadmodel"
     CATEGORY = "XLabsNodes"
 
     def loadmodel(self, model_path, config_path):
-        
         device=mm.get_torch_device()
+        offload_device=mm.unet_offload_device()
         
-        return (None,)
-    
+        file_path_x = os.path.join(dir_xlabs_flux, config_path)
+        сkpt_path_x = os.path.join(dir_xlabs_flux, model_path)
+        #file_path_u = os.path.join(dir_xlabs_flux, config_path)
+        #file_path_c = os.path.join(dir_xlabs_flux, config_path)
+        pbar = ProgressBar(10)
+        file_path = None
+        ckpt_path = None
+        dtype = None
+        if os.path.exists(file_path_x):
+            file_path = file_path_x
+            ckpt_path = сkpt_path_x
+        else:
+            assert("File doesn't exist")
+            return (None,)
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+            dtype = data['img_in']['weights']
+            if dtype == "fp16":
+                assert("We currently don't support fp16 type")
+                pass
+            elif dtype == "qfloat8_e4m3fn":
+                pass
+            else:
+                assert("We currently don't support this type of model")
+        except:
+            assert("Something went wrong, try to reproduce again and contact with devs")
+            return (None,)
+        pbar.update(1)
+        name = model_path.split(".")[0]
+        print(name)
+        model = ModFlux(configs[name].params)
+        model.to(torch.bfloat16)
+        pbar.update(2)
+        print("1/3 loaded")
+        double_blocks_init(model, configs[name].params, torch.bfloat16)
+        pbar.update(3)
+        print("2/3 loaded")
+        single_blocks_init(model, configs[name].params, torch.bfloat16)
+        pbar.update(4)
+        print("3/3 loaded")
+        model.to(torch.bfloat16)
+        pbar.update(5)
+        print("Loading checkpoint")
+        # load_sft doesn't support torch.device
+        sd = load_sft(ckpt_path, device='cpu')
+        pbar.update(6)
+        with open(file_path, "r") as f:
+            quantization_map = json.load(f)
+        if dtype=="qfloat8_e4m3fn":
+            print("Start a quantization process...")
+            requantize(model, sd, quantization_map, device=torch.device('cpu'))
+            print("Model is quantized!")
+            pbar.update(7)
+        ret_controlnet = mp.Model_Patcher(model, load_device=torch.device('cpu'), offload_device=offload_device)
+        print(model)
+        print(ret_controlnet)
+        pbar.update(10)
+        return (ret_controlnet,)
+     
 
 
 NODE_CLASS_MAPPINGS = {
     "FluxLoraLoader": LoadFluxLora,
     "LoadFluxControlNet": LoadFluxControlNet,
-    #"ApplyFluxControlNet": ApplyFluxControlNet,
+    "ApplyFluxControlNet": ApplyFluxControlNet,
     "XlabsSampler": XlabsSampler,
-    
+    "LoadFluxModel": LoadFluxModel,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
     "LoadFluxControlNet": "Load Flux ControlNet",
-    #"ApplyFluxControlNet": "Apply Flux ControlNet",
+    "ApplyFluxControlNet": "Apply Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
+    "LoadFluxModel": "Load Flux Model",
 }
