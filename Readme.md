@@ -1,4 +1,5 @@
 # How to use
+![FLUX Finetuning scripts](./assets/flux-controlnet-collections.png)
 ![FLUX Finetuning scripts](./assets/image1.png)
 
 ## Installation:
