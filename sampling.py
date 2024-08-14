@@ -18,7 +18,10 @@ class UpcastTo:
         modified_args=tuple(arg.to(self.dtype) if isinstance(arg, (Tensor, nn.Module)) else arg for arg in args)
         modified_kwargs = {k: (v if isinstance(v, (Tensor, nn.Module)) else v) for k, v in kwargs.items()}
         #orig_dtype = copy.copy(layer.dtype)
-        orig_dtype = next(module.parameters()).dtype
+        try:
+            orig_dtype = next(layer.parameters()).dtype
+        except:
+            orig_dtype = None
         if orig_dtype!=self.dtype:
             lcp = copy.deepcopy(layer)
             lcp.to(self.dtype)
