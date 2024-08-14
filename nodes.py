@@ -16,8 +16,8 @@ from .xflux.src.flux.util import (configs, load_ae, load_clip,
 
 from .utils import FluxUpdateModules, attn_processors, set_attn_processor, is_model_pathched, merge_loras, tensor_to_pil, LATENT_PROCESSOR_COMFY
 from .layers import DoubleStreamBlockLoraProcessor, DoubleStreamBlockProcessor, DoubleStreamBlockLorasMixerProcessor
-from .model_init import Flux as ModFlux
-from .model_init import double_blocks_init, single_blocks_init
+from .xflux.src.flux.model import Flux as ModFlux
+#from .model_init import double_blocks_init, single_blocks_init
 
 
 from comfy.utils import get_attr, set_attr
@@ -198,11 +198,9 @@ class LoadFluxControlNet:
         if checkpoint is not None:
             controlnet.load_state_dict(checkpoint)
             control_type = "canny"
-            annotator = Annotator()
         ret_controlnet = {
             "model": controlnet,
             "control_type": control_type,
-            "annotator": annotator,
         }
         return (ret_controlnet,)
     
@@ -210,8 +208,8 @@ class ApplyFluxControlNet:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {"controlnet": ("FluxControlNet",),
-                             "conditioning": ("CONDITIONING",),
-                             "IMAGE": ("image",),
+                             "image": ("IMAGE", ),
+                             "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01})
                               }}
 
     RETURN_TYPES = ("ControlNetCondition",)
@@ -219,17 +217,15 @@ class ApplyFluxControlNet:
     FUNCTION = "prepare"
     CATEGORY = "XLabsNodes"
 
-    def prepare(self, controlnet, conditioning, image):
+    def prepare(self, controlnet, image, strength):
+        print(type(image), image.shape, image.min(), image.max())
         device=mm.get_torch_device()
-        print(image.size())
-        b, h, w, c = image.size()
-        img = tensor_to_pil(image.permute(0, 1, 2, 3))
-        controlnet_image = controlnet["annotator"](img, w, h, controlnet["control_type"])
-        controlnet_image = torch.from_numpy((np.array(controlnet_image) / 127.5) - 1)
-        controlnet_image = controlnet_image.permute(2, 0, 1).unsqueeze(0).to(torch.bfloat16).to(device)
+        controlnet_image = torch.from_numpy((np.array(image) * 2) - 1)
+        controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(torch.bfloat16).to(device)
         
         ret_cont = {
             "img": controlnet_image,
+            "controlnet_strength": strength,
             "model": controlnet["model"],
         }
         return (ret_cont,)
@@ -245,7 +241,7 @@ class XlabsSampler:
                     "noise_seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                     "steps": ("INT",  {"default": 20, "min": 1, "max": 100}),
                     "timestep_to_start_cfg": ("INT",  {"default": 20, "min": 0, "max": 100}),
-                    "true_gs": ("INT",  {"default": 3, "min": 0, "max": 100}),
+                    "true_gs": ("FLOAT",  {"default": 3, "min": 0, "max": 100}),
                 },
             "optional": {
                     "latent_image": ("LATENT", {"default": None}),
@@ -268,7 +264,7 @@ class XlabsSampler:
         guidance=conditioning[0][1]['guidance']
         
         device=mm.get_torch_device()
-        dtype_model = torch.bfloat16
+        dtype_model = torch.bfloat16#model.model.diffusion_model.img_in.weight.dtype
         offload_device=mm.unet_offload_device()
         
         torch.manual_seed(noise_seed)
@@ -312,6 +308,8 @@ class XlabsSampler:
         else:
             controlnet = controlnet_condition['model']
             controlnet_image = controlnet_condition['img']
+            controlnet_image = torch.nn.functional.interpolate(controlnet_image, size=(height, width), scale_factor=None, mode='bicubic',)
+            controlnet_strength = controlnet_condition['controlnet_strength']
             controlnet.to(device, dtype=dtype_model)
             controlnet_image.to(device, dtype=dtype_model)
             x = denoise_controlnet(
@@ -322,7 +320,8 @@ class XlabsSampler:
                 neg_txt=neg_inp_cond['txt'],
                 neg_txt_ids=neg_inp_cond['txt_ids'],
                 neg_vec=neg_inp_cond['vec'],
-                true_gs=true_gs
+                true_gs=true_gs,
+                controlnet_gs=controlnet_strength
             )
             controlnet.to(offload_device)
         
@@ -333,7 +332,7 @@ class XlabsSampler:
         #model.model.to(offload_device)
         return (lat_ret,)
 
-"""
+    
 import json
 from optimum.quanto import requantize
 from safetensors.torch import load_file as load_sft
@@ -396,6 +395,7 @@ class LoadFluxModel:
         print(name)
         model = ModFlux(configs[name].params)
         model.to(torch.bfloat16)
+        '''
         pbar.update(2)
         print("1/3 loaded")
         double_blocks_init(model, configs[name].params, torch.bfloat16)
@@ -406,6 +406,7 @@ class LoadFluxModel:
         print("3/3 loaded")
         model.to(torch.bfloat16)
         pbar.update(5)
+        '''
         print("Loading checkpoint")
         # load_sft doesn't support torch.device
         sd = load_sft(ckpt_path, device='cpu')
@@ -414,15 +415,15 @@ class LoadFluxModel:
             quantization_map = json.load(f)
         if dtype=="qfloat8_e4m3fn":
             print("Start a quantization process...")
-            requantize(model, sd, quantization_map, device=torch.device('cpu'))
+            requantize(model, sd, quantization_map, device=torch.device('cuda'))
             print("Model is quantized!")
             pbar.update(7)
-        ret_unet = mp.Model_Patcher(model, load_device=torch.device('cpu'), offload_device=offload_device)
+        ret_controlnet = mp.Model_Patcher(model, load_device=torch.device('cpu'), offload_device=offload_device)
         print(model)
-        print(ret_unet)
+        print(ret_controlnet)
         pbar.update(10)
-        return (ret_unet,)
-"""
+        return (ret_controlnet,)
+     
 
 
 NODE_CLASS_MAPPINGS = {
@@ -430,12 +431,12 @@ NODE_CLASS_MAPPINGS = {
     "LoadFluxControlNet": LoadFluxControlNet,
     "ApplyFluxControlNet": ApplyFluxControlNet,
     "XlabsSampler": XlabsSampler,
-    #"LoadFluxModel": LoadFluxModel,
+    "LoadFluxModel": LoadFluxModel,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
     "LoadFluxControlNet": "Load Flux ControlNet",
     "ApplyFluxControlNet": "Apply Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
-    #"LoadFluxModel": "Load Flux Model",
+    "LoadFluxModel": "Load Flux Model",
 }
