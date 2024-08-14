@@ -1,3 +1,6 @@
-1. Clone x-flux here
-2. Rename x-flux to xflux
-3. Enjoy
+# How to use
+
+1. Go to `ComfyUI/custom_nodes`
+2. Clone this repo, path should be `ComfyUI/custom_nodes/x-flux-comfyui/*`, where * is all the files in this repo
+3. Go to  `ComfyUI/custom_nodes/x-flux-comfyui/` and run `python setup.py`
+4. Run ComfyUI after installing and enjoy!
