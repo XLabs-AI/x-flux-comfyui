@@ -8,10 +8,11 @@ if False:
         os.system("git clone https://github.com/XLabs-AI/x-flux" )
 #os.rename("x-flux", "xflux")    
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-run = f'mv x-flux "{cur_dir}/xflux"'
-if os.name == 'nt':
-    run = f'move x-flux "{cur_dir}\\xflux"'
-os.system(run)
+if False:
+    run = f'mv x-flux "{cur_dir}/xflux"'
+    if os.name == 'nt':
+        run = f'move x-flux "{cur_dir}\\xflux"'
+    os.system(run)
 if os.name == 'nt':
     os.system(f'pip install -r "{cur_dir}\\requirements.txt"')
 else:
