@@ -280,7 +280,7 @@ class XlabsSampler:
         
         torch.manual_seed(noise_seed)
         
-        bc, c, w, h = latent_image['samples'].shape
+        bc, c, h, w = latent_image['samples'].shape
         height=h*8
         width=w*8
         
@@ -326,6 +326,7 @@ class XlabsSampler:
             controlnet_strength = controlnet_condition['controlnet_strength']
             controlnet.to(device, dtype=dtype_model)
             controlnet_image.to(device, dtype=dtype_model)
+            #mm.load_model_gpu(controlnet)
             pbar.update(1)
             x = denoise_controlnet(
                 pbar,
@@ -339,7 +340,7 @@ class XlabsSampler:
                 true_gs=true_gs,
                 controlnet_gs=controlnet_strength
             )
-            controlnet.to(offload_device)
+            #controlnet.to(offload_device)
         
         x=unpack(x,height,width)
         pbar.update(2)
