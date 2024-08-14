@@ -259,8 +259,16 @@ class XlabsSampler:
     CATEGORY = "XLabsNodes"
 
     def sampling(self, model, conditioning, neg_conditioning, noise_seed, steps, timestep_to_start_cfg, true_gs, latent_image=None, controlnet_condition=None):
-        
+        additional_steps = 11
+        if controlnet_condition is None:
+            additional_steps = 11
+        else:
+            additional_steps=12
+        pbar = ProgressBar(steps+additional_steps)
+        pbar.update(1)
         mm.load_model_gpu(model)
+
+        pbar.update(5)
         inmodel = model.model
         #print(conditioning[0][0].shape) #//t5
         #print(conditioning[0][1]['pooled_output'].shape) #//clip
@@ -296,12 +304,15 @@ class XlabsSampler:
         except:
             pass
         x.to(device)
-        
+        pbar.update(1)
         inmodel.diffusion_model.to(device)
         inp_cond = prepare(conditioning[0][0], conditioning[0][1]['pooled_output'], img=x)
         neg_inp_cond = prepare(neg_conditioning[0][0], neg_conditioning[0][1]['pooled_output'], img=x)
+        pbar.update(2)
         if controlnet_condition is None:
-            x = denoise(inmodel.diffusion_model, **inp_cond, timesteps=timesteps, guidance=guidance,
+            x = denoise(
+                pbar,
+                inmodel.diffusion_model, **inp_cond, timesteps=timesteps, guidance=guidance,
                 timestep_to_start_cfg=timestep_to_start_cfg,
                 neg_txt=neg_inp_cond['txt'],
                 neg_txt_ids=neg_inp_cond['txt_ids'],
@@ -314,7 +325,9 @@ class XlabsSampler:
             controlnet_image = controlnet_condition['img']
             controlnet.to(device, dtype=dtype_model)
             controlnet_image.to(device, dtype=dtype_model)
+            pbar.update(1)
             x = denoise_controlnet(
+                pbar,
                 inmodel.diffusion_model, **inp_cond, controlnet=controlnet,
                 timesteps=timesteps, guidance=guidance,
                 controlnet_cond=controlnet_image,
@@ -327,6 +340,7 @@ class XlabsSampler:
             controlnet.to(offload_device)
         
         x=unpack(x,height,width)
+        pbar.update(2)
         lat_processor = LATENT_PROCESSOR_COMFY()
         x=lat_processor(x)
         lat_ret = {"samples": x}
