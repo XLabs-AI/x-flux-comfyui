@@ -333,7 +333,7 @@ class XlabsSampler:
         #model.model.to(offload_device)
         return (lat_ret,)
 
-    
+"""
 import json
 from optimum.quanto import requantize
 from safetensors.torch import load_file as load_sft
@@ -417,12 +417,12 @@ class LoadFluxModel:
             requantize(model, sd, quantization_map, device=torch.device('cpu'))
             print("Model is quantized!")
             pbar.update(7)
-        ret_controlnet = mp.Model_Patcher(model, load_device=torch.device('cpu'), offload_device=offload_device)
+        ret_unet = mp.Model_Patcher(model, load_device=torch.device('cpu'), offload_device=offload_device)
         print(model)
-        print(ret_controlnet)
+        print(ret_unet)
         pbar.update(10)
-        return (ret_controlnet,)
-     
+        return (ret_unet,)
+"""
 
 
 NODE_CLASS_MAPPINGS = {
@@ -430,12 +430,12 @@ NODE_CLASS_MAPPINGS = {
     "LoadFluxControlNet": LoadFluxControlNet,
     "ApplyFluxControlNet": ApplyFluxControlNet,
     "XlabsSampler": XlabsSampler,
-    "LoadFluxModel": LoadFluxModel,
+    #"LoadFluxModel": LoadFluxModel,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
     "LoadFluxControlNet": "Load Flux ControlNet",
     "ApplyFluxControlNet": "Apply Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
-    "LoadFluxModel": "Load Flux Model",
+    #"LoadFluxModel": "Load Flux Model",
 }
