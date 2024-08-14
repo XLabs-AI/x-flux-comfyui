@@ -11,23 +11,33 @@ from .layers import timestep_embedding
 import copy
 
 
-class UpcastTo:
-    def __init__(self, dtype):
+class UpcastToTND:
+    def __init__(self, dtype, device):
         self.dtype = dtype
+        self.device = device
     def __call__(self, layer, *args, **kwargs):
         modified_args=tuple(arg.to(self.dtype) if isinstance(arg, (Tensor, nn.Module)) else arg for arg in args)
         modified_kwargs = {k: (v if isinstance(v, (Tensor, nn.Module)) else v) for k, v in kwargs.items()}
         #orig_dtype = copy.copy(layer.dtype)
         orig_dtype = next(layer.parameters()).dtype
+        orig_device = copy.copy(layer.device)
+        offload = False
+
         if orig_dtype!=self.dtype:
             lcp = copy.deepcopy(layer)
             lcp.to(self.dtype)
         else:
             lcp = layer
-
+        if orig_device != self.device:
+            lcp.to(self.device)
+            offload = True
         x = lcp(*modified_args, **modified_kwargs)
+        if offload:
+            lcp.to(orig_device)
         #layer.to(orig_dtype)
         return x
+    def convert_tensor(self, x):
+        return x.to(self.dtype, self.device)
 
 
 def model_forward(
@@ -43,7 +53,13 @@ def model_forward(
 ) -> Tensor:
     if img.ndim != 3 or txt.ndim != 3:
         raise ValueError("Input img and txt tensors must have 3 dimensions.")
-    uncastilka = UpcastTo(img.dtype)
+    uncastilka = UpcastToTND(img.dtype, img.device)
+    txt = uncastilka.convert_tensor(txt)
+    img_ids = uncastilka.convert_tensor(img_ids)
+    txt_ids = uncastilka.convert_tensor(txt_ids)
+    timesteps = uncastilka.convert_tensor(timesteps)
+    y = uncastilka.convert_tensor(y)
+    
     # running on sequences img
     img = uncastilka(model.img_in, img)
     vec = uncastilka(model.time_in, timestep_embedding(timesteps, 256))
@@ -63,7 +79,7 @@ def model_forward(
         # controlnet residual
         if block_controlnet_hidden_states is not None:
 
-            img = img + block_controlnet_hidden_states[index_block % 2].to(uncastilka.dtype)
+            img = img + uncastilka.convert_tensor(block_controlnet_hidden_states[index_block % 2])
 
 
     img = torch.cat((txt, img), 1)

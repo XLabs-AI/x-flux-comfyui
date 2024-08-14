@@ -265,8 +265,13 @@ class XlabsSampler:
             additional_steps=12
         pbar = ProgressBar(steps+additional_steps)
         pbar.update(1)
-        mm.load_model_gpu(model)
 
+
+        total_vram = mm.total_vram
+        if controlnet_condition is None:
+            mm.load_model_gpu(model)
+        else:
+            mm.load_models_gpu([model, controlnet_condition['model']])
         pbar.update(5)
         inmodel = model.model
         #print(conditioning[0][0].shape) #//t5
@@ -275,7 +280,8 @@ class XlabsSampler:
         guidance=conditioning[0][1]['guidance']
         
         device=mm.get_torch_device()
-        dtype_model = torch.bfloat16#model.model.diffusion_model.img_in.weight.dtype
+        dtype_model = torch.bfloat16#
+        orig_model_dtype = model.model.diffusion_model.img_in.weight.dtype
         offload_device=mm.unet_offload_device()
         
         torch.manual_seed(noise_seed)
@@ -298,13 +304,13 @@ class XlabsSampler:
             (width // 8) * (height // 8) // (16 * 16)*2,
             shift=False,
         )
-        try:
-            inmodel.to(device)
-        except:
-            pass
         x.to(device)
         pbar.update(1)
-        inmodel.diffusion_model.to(device)
+        if total_vram>1024*20:
+            inmodel.diffusion_model.to(device)
+        else:
+            if orig_model_dtype==torch.bfloat16:
+                inmodel.diffusion_model.to(offload_device)
         inp_cond = prepare(conditioning[0][0], conditioning[0][1]['pooled_output'], img=x)
         neg_inp_cond = prepare(neg_conditioning[0][0], neg_conditioning[0][1]['pooled_output'], img=x)
         pbar.update(2)
