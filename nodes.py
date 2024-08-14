@@ -10,7 +10,7 @@ import torch
 #from .xflux.src.flux.model import Flux as ModFlux
 
 from .xflux.src.flux.util import (configs, load_ae, load_clip,
-                            load_flow_model, load_t5, load_safetensors, load_flow_model_quintized, load_from_repo_id,
+                            load_flow_model, load_t5, load_safetensors, load_from_repo_id,
                             load_controlnet, Annotator)
 
 
