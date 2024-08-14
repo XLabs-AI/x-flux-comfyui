@@ -13,5 +13,4 @@ if os.name == 'nt':
     run = f"move x-flux {cur_dir}/xflux"
 os.system(run)
 os.system(f"pip install -r {cur_dir}/requirements.txt")
-os.system(f"pip install -r {cur_dir}/xflux/requirements.txt")
 print("Succesfully installed")
