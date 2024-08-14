@@ -202,3 +202,27 @@ class LATENT_PROCESSOR_COMFY:
                 ]
     def __call__(self, x):
         return (x / self.scale_factor) + self.shift_factor
+
+
+def check_is_comfy_lora(sd):
+    for k in sd:
+        if "lora_down" in k or "lora_up" in k:
+            return True
+    return False
+
+def comfy_to_xlabs_lora(sd):
+    sd_out = {}
+    for k in sd:
+        if "diffusion_model" in k:
+            new_k =  (k
+                    .replace(".lora_down.weight", ".down.weight")
+                    .replace(".lora_up.weight", ".up.weight")
+                    .replace(".img_attn.proj.", ".processor.proj_lora1.")
+                    .replace(".txt_attn.proj.", ".processor.proj_lora2.")
+                    .replace(".img_attn.qkv.", ".processor.qkv_lora1.")
+                    .replace(".txt_attn.qkv.", ".processor.qkv_lora2."))
+            new_k = new_k[len("diffusion_model."):]
+        else:
+            new_k=k
+        sd_out[new_k] = sd[k]
+    return sd_out
