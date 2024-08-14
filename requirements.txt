@@ -1,2 +1,5 @@
 GitPython
-einops
+einops==0.8.0
+transformers
+diffusers
+sentencepiece
