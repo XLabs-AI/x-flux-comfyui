@@ -220,45 +220,6 @@
       }
     },
     {
-      "id": 16,
-      "type": "LoadImage",
-      "pos": [
-        -378,
-        -239
-      ],
-      "size": {
-        "0": 315,
-        "1": 314
-      },
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            22
-          ],
-          "shape": 3,
-          "slot_index": 0
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null,
-          "shape": 3
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadImage"
-      },
-      "widgets_values": [
-        "1.jpg",
-        "image"
-      ]
-    },
-    {
       "id": 3,
       "type": "XlabsSampler",
       "pos": [
@@ -446,7 +407,7 @@
         "1": 106
       },
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
       "outputs": [
         {
@@ -535,6 +496,45 @@
       "properties": {
         "Node name for S&R": "PreviewImage"
       }
+    },
+    {
+      "id": 16,
+      "type": "LoadImage",
+      "pos": [
+        -378,
+        -239
+      ],
+      "size": {
+        "0": 315,
+        "1": 314
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            22
+          ],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.jpg",
+        "image"
+      ]
     }
   ],
   "links": [
@@ -655,10 +655,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.7627768444385488,
+      "scale": 2.176291357901496,
       "offset": [
-        114.75785436048284,
-        686.1530251069007
+        -1061.2497588685817,
+        110.69101119830194
       ]
     }
   },

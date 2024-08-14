@@ -188,45 +188,6 @@
       ]
     },
     {
-      "id": 16,
-      "type": "LoadImage",
-      "pos": [
-        -378,
-        -239
-      ],
-      "size": {
-        "0": 315,
-        "1": 314
-      },
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            37
-          ],
-          "shape": 3,
-          "slot_index": 0
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null,
-          "shape": 3
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadImage"
-      },
-      "widgets_values": [
-        "1.jpg",
-        "image"
-      ]
-    },
-    {
       "id": 8,
       "type": "VAELoader",
       "pos": [
@@ -238,7 +199,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 4,
+      "order": 3,
       "mode": 0,
       "outputs": [
         {
@@ -270,7 +231,7 @@
         "1": 106
       },
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
       "outputs": [
         {
@@ -535,6 +496,45 @@
         "man with microphone in the office, anime",
         4
       ]
+    },
+    {
+      "id": 16,
+      "type": "LoadImage",
+      "pos": [
+        -378,
+        -239
+      ],
+      "size": {
+        "0": 315,
+        "1": 314
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            37
+          ],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.jpg",
+        "image"
+      ]
     }
   ],
   "links": [
@@ -655,10 +655,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 2.176291357901498,
+      "scale": 1.3513057093103997,
       "offset": [
-        -1089.8618730040128,
-        1.1717304262004689
+        -758.5037788677209,
+        160.33608624136815
       ]
     }
   },

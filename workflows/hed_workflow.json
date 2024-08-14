@@ -155,45 +155,6 @@
       }
     },
     {
-      "id": 16,
-      "type": "LoadImage",
-      "pos": [
-        -378,
-        -239
-      ],
-      "size": {
-        "0": 315,
-        "1": 314
-      },
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            42
-          ],
-          "shape": 3,
-          "slot_index": 0
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null,
-          "shape": 3
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadImage"
-      },
-      "widgets_values": [
-        "1.jpg",
-        "image"
-      ]
-    },
-    {
       "id": 8,
       "type": "VAELoader",
       "pos": [
@@ -205,7 +166,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 3,
+      "order": 2,
       "mode": 0,
       "outputs": [
         {
@@ -237,7 +198,7 @@
         "1": 82
       },
       "flags": {},
-      "order": 4,
+      "order": 3,
       "mode": 0,
       "outputs": [
         {
@@ -513,7 +474,7 @@
         "1": 106
       },
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
       "outputs": [
         {
@@ -533,6 +494,45 @@
         1024,
         1024,
         1
+      ]
+    },
+    {
+      "id": 16,
+      "type": "LoadImage",
+      "pos": [
+        -378,
+        -239
+      ],
+      "size": {
+        "0": 315,
+        "1": 314
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            42
+          ],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.jpg",
+        "image"
       ]
     }
   ],
@@ -654,10 +654,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 1.9784466890013632,
+      "scale": 1.486436280241436,
       "offset": [
-        -1135.7399931530067,
-        140.08158464337225
+        -904.5042545771234,
+        205.34759825581054
       ]
     }
   },
