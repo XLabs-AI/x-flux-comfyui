@@ -286,7 +286,10 @@ class XlabsSampler:
         
         if c==16:
             x=latent_image['samples']
+            lat_processor2 = LATENT_PROCESSOR_COMFY()
+            x=lat_processor2.go_back(x)
             x.to(dtype=dtype_model)
+
         else:
             x = get_noise(
                 1, height, width, device=device,

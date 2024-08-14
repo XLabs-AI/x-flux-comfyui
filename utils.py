@@ -202,6 +202,9 @@ class LATENT_PROCESSOR_COMFY:
                 ]
     def __call__(self, x):
         return (x / self.scale_factor) + self.shift_factor
+    def go_back(self, x):
+        return (x - self.shift_factor) * self.scale_factor
+
 
 
 def check_is_comfy_lora(sd):
