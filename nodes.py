@@ -218,7 +218,6 @@ class ApplyFluxControlNet:
     CATEGORY = "XLabsNodes"
 
     def prepare(self, controlnet, image, strength):
-        print(type(image), image.shape, image.min(), image.max())
         device=mm.get_torch_device()
         controlnet_image = torch.from_numpy((np.array(image) * 2) - 1)
         controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(torch.bfloat16).to(device)
