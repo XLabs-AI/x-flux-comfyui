@@ -11,7 +11,7 @@
 After the first launch, the `ComfyUI/models/xlabs/loras` and `ComfyUI/models/xlabs/controlnets` folders will be created automatically. 
 So, to use lora or controlnet just put models in these folders. 
 After that, you may need to click "Refresh" in the user-friendly interface to use the models.
-
+For controlnet you need install https://github.com/Fannovel16/comfyui_controlnet_aux
 ## Models
 
 We trained **Canny ControlNet**, **Depth ControlNet**, **HED ControlNet** and **LoRA** checkpoints for [`FLUX.1 [dev]`](https://github.com/black-forest-labs/flux) <br/>
