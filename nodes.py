@@ -349,7 +349,7 @@ class XlabsSampler:
         #model.model.to(offload_device)
         return (lat_ret,)
 
-    
+"""
 import json
 from optimum.quanto import requantize
 from safetensors.torch import load_file as load_sft
@@ -440,6 +440,7 @@ class LoadFluxModel:
         print(ret_controlnet)
         pbar.update(10)
         return (ret_controlnet,)
+"""
      
 
 
