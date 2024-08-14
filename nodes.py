@@ -83,7 +83,7 @@ class LoadFluxLora:
     CATEGORY = "XLabsNodes"
 
     def loadmodel(self, model, lora_name, strength_model):
-        debug=True
+        debug=False
         
         pbar = ProgressBar(5)
         device=mm.get_torch_device()
@@ -444,12 +444,12 @@ NODE_CLASS_MAPPINGS = {
     "LoadFluxControlNet": LoadFluxControlNet,
     "ApplyFluxControlNet": ApplyFluxControlNet,
     "XlabsSampler": XlabsSampler,
-    "LoadFluxModel": LoadFluxModel,
+    #"LoadFluxModel": LoadFluxModel,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
     "LoadFluxControlNet": "Load Flux ControlNet",
     "ApplyFluxControlNet": "Apply Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
-    "LoadFluxModel": "Load Flux Model",
+    #"LoadFluxModel": "Load Flux Model",
 }
