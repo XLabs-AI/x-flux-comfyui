@@ -22,11 +22,9 @@ def model_forward(
 ) -> Tensor:
     if img.ndim != 3 or txt.ndim != 3:
         raise ValueError("Input img and txt tensors must have 3 dimensions.")
-
     # running on sequences img
     img = model.img_in(img)
     vec = model.time_in(timestep_embedding(timesteps, 256))
-    print(model.params.guidance_embed)
     if model.params.guidance_embed:
         if guidance is None:
             raise ValueError("Didn't get guidance strength for guidance distilled model.")
@@ -206,6 +204,7 @@ def denoise_controlnet(
 ):
     # this is ignored for schnell
     i = 0
+
     guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
     for t_curr, t_prev in zip(timesteps[:-1], timesteps[1:]):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
