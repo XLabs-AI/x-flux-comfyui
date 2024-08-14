@@ -3,10 +3,31 @@ from typing import Callable
 
 import torch
 from einops import rearrange, repeat
-from torch import Tensor
+from torch import Tensor, nn
 
 #from .modules.conditioner import HFEmbedder
 from .layers import timestep_embedding
+
+import copy
+
+
+class UpcastTo:
+    def __init__(self, dtype):
+        self.dtype = dtype
+    def __call__(self, layer, *args, **kwargs):
+        modified_args=tuple(arg.to(self.dtype) if isinstance(arg, (Tensor, nn.Module)) else arg for arg in args)
+        modified_kwargs = {k: (v if isinstance(v, (Tensor, nn.Module)) else v) for k, v in kwargs.items()}
+        #orig_dtype = copy.copy(layer.dtype)
+        orig_dtype = next(layer.parameters()).dtype
+        if orig_dtype!=self.dtype:
+            lcp = copy.deepcopy(layer)
+            lcp.to(self.dtype)
+        else:
+            lcp = layer
+
+        x = lcp(*modified_args, **modified_kwargs)
+        #layer.to(orig_dtype)
+        return x
 
 
 def model_forward(
@@ -22,33 +43,35 @@ def model_forward(
 ) -> Tensor:
     if img.ndim != 3 or txt.ndim != 3:
         raise ValueError("Input img and txt tensors must have 3 dimensions.")
+    uncastilka = UpcastTo(img.dtype)
     # running on sequences img
-    img = model.img_in(img)
-    vec = model.time_in(timestep_embedding(timesteps, 256))
+    img = uncastilka(model.img_in, img)
+    vec = uncastilka(model.time_in, timestep_embedding(timesteps, 256))
     if model.params.guidance_embed:
         if guidance is None:
             raise ValueError("Didn't get guidance strength for guidance distilled model.")
-        vec = vec + model.guidance_in(timestep_embedding(guidance, 256))
-    vec = vec + model.vector_in(y)
-    txt = model.txt_in(txt)
+        vec = vec + uncastilka(model.guidance_in, timestep_embedding(guidance, 256))
+    vec = vec + uncastilka(model.vector_in, y)
+    txt = uncastilka(model.txt_in, txt)
 
     ids = torch.cat((txt_ids, img_ids), dim=1)
-    pe = model.pe_embedder(ids)
+    pe = uncastilka(model.pe_embedder, ids)
     if block_controlnet_hidden_states is not None:
         controlnet_depth = len(block_controlnet_hidden_states)
     for index_block, block in enumerate(model.double_blocks):
-        img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
+        img, txt = uncastilka(block, img=img, txt=txt, vec=vec, pe=pe)
         # controlnet residual
         if block_controlnet_hidden_states is not None:
-            img = img + block_controlnet_hidden_states[index_block % 2]
+
+            img = img + block_controlnet_hidden_states[index_block % 2].to(uncastilka.dtype)
 
 
     img = torch.cat((txt, img), 1)
     for block in model.single_blocks:
-        img = block(img, vec=vec, pe=pe)
+        img = uncastilka(block, img, vec=vec, pe=pe)
     img = img[:, txt.shape[1] :, ...]
 
-    img = model.final_layer(img, vec)  # (N, T, patch_size ** 2 * out_channels)
+    img = uncastilka(model.final_layer, img, vec)  # (N, T, patch_size ** 2 * out_channels)
     return img
 
 def get_noise(
