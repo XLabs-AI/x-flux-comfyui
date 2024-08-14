@@ -310,7 +310,9 @@ class XlabsSampler:
             inmodel.diffusion_model.to(device)
         else:
             if orig_model_dtype==torch.bfloat16:
-                inmodel.diffusion_model.to(offload_device)
+                inmodel.to(offload_device)
+            if total_vram<1024*10:
+                inmodel.to(offload_device)
         inp_cond = prepare(conditioning[0][0], conditioning[0][1]['pooled_output'], img=x)
         neg_inp_cond = prepare(neg_conditioning[0][0], neg_conditioning[0][1]['pooled_output'], img=x)
         pbar.update(2)
