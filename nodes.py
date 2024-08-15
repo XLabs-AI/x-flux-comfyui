@@ -289,7 +289,7 @@ class XlabsSampler:
             lat_processor2 = LATENT_PROCESSOR_COMFY()
             x=lat_processor2.go_back(x)
             x.to(dtype=dtype_model)
-
+            x.to(device)
         else:
             x = get_noise(
                 1, height, width, device=device,
@@ -323,12 +323,14 @@ class XlabsSampler:
             )
         
         else:
+            
             controlnet = controlnet_condition['model']
             controlnet_image = controlnet_condition['img']
             controlnet_image = torch.nn.functional.interpolate(controlnet_image, size=(height, width), scale_factor=None, mode='bicubic',)
             controlnet_strength = controlnet_condition['controlnet_strength']
             controlnet.to(device, dtype=dtype_model)
             controlnet_image.to(device, dtype=dtype_model)
+            mm.load_models_gpu([model,controlnet])
             #mm.load_model_gpu(controlnet)
             pbar.update(1)
             x = denoise_controlnet(
