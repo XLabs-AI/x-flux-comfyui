@@ -25,22 +25,19 @@ from .xflux.src.flux.model import Flux as ModFlux
 from comfy.utils import get_attr, set_attr
 
 
-dir_xlabs = os.path.join(folder_paths.models_dir, "xlabs")
-os.makedirs(dir_xlabs, exist_ok=True)
-dir_xlabs_loras = os.path.join(dir_xlabs, "loras")
+dir_loras = os.path.join(folder_paths.models_dir, "loras")
 os.makedirs(dir_xlabs_loras, exist_ok=True)
-dir_xlabs_controlnets = os.path.join(dir_xlabs, "controlnets")
+dir_controlnets = os.path.join(folder_paths.models_dir, "controlnet")
 os.makedirs(dir_xlabs_controlnets, exist_ok=True)
-dir_xlabs_flux = os.path.join(dir_xlabs, "flux")
-os.makedirs(dir_xlabs_flux, exist_ok=True)
+dir_flux = os.path.join(folder_paths.models_dir, "unet")
+os.makedirs(dir_flux, exist_ok=True)
 
 
 
-folder_paths.folder_names_and_paths["xlabs"] = ([dir_xlabs], folder_paths.supported_pt_extensions)
-folder_paths.folder_names_and_paths["xlabs_loras"] = ([dir_xlabs_loras], folder_paths.supported_pt_extensions)
-folder_paths.folder_names_and_paths["xlabs_controlnets"] = ([dir_xlabs_controlnets], folder_paths.supported_pt_extensions)
-folder_paths.folder_names_and_paths["xlabs_flux"] = ([dir_xlabs_flux], folder_paths.supported_pt_extensions)
-folder_paths.folder_names_and_paths["xlabs_flux_json"] = ([dir_xlabs_flux], set({'.json',}))
+folder_paths.folder_names_and_paths["xlabs_loras"] = ([dir_loras], folder_paths.supported_pt_extensions)
+folder_paths.folder_names_and_paths["xlabs_controlnets"] = ([dir_controlnets], folder_paths.supported_pt_extensions)
+folder_paths.folder_names_and_paths["xlabs_flux"] = ([dir_flux], folder_paths.supported_pt_extensions)
+folder_paths.folder_names_and_paths["xlabs_flux_json"] = ([dir_flux], set({'.json',}))
 
 
 
