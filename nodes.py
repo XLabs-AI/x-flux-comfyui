@@ -104,7 +104,7 @@ class LoadFluxLora:
         
         pbar.update(1)
         bi.model.to(device)
-        checkpoint, lora_rank = load_flux_lora(os.path.join(dir_xlabs_loras, lora_name))
+        checkpoint, lora_rank = load_flux_lora(os.path.join(dir_loras, lora_name))
         pbar.update(1)
         if not is_patched:
             patches=FluxUpdateModules(tyanochky)
@@ -195,7 +195,7 @@ class LoadFluxControlNet:
         device=mm.get_torch_device()
 
         controlnet = load_controlnet(model_name, device)
-        checkpoint = load_checkpoint_controlnet(os.path.join(dir_xlabs_controlnets, controlnet_path))
+        checkpoint = load_checkpoint_controlnet(os.path.join(dir_controlnets, controlnet_path))
         if checkpoint is not None:
             controlnet.load_state_dict(checkpoint)
             control_type = "canny"
@@ -385,10 +385,10 @@ class LoadFluxModel:
         device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
         
-        file_path_x = os.path.join(dir_xlabs_flux, config_path)
-        сkpt_path_x = os.path.join(dir_xlabs_flux, model_path)
-        #file_path_u = os.path.join(dir_xlabs_flux, config_path)
-        #file_path_c = os.path.join(dir_xlabs_flux, config_path)
+        file_path_x = os.path.join(dir_flux, config_path)
+        сkpt_path_x = os.path.join(dir_flux, model_path)
+        #file_path_u = os.path.join(dir_flux, config_path)
+        #file_path_c = os.path.join(dir_flux, config_path)
         pbar = ProgressBar(10)
         file_path = None
         ckpt_path = None
