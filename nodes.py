@@ -330,7 +330,7 @@ class XlabsSampler:
             controlnet_strength = controlnet_condition['controlnet_strength']
             controlnet.to(device, dtype=dtype_model)
             controlnet_image.to(device, dtype=dtype_model)
-            mm.load_models_gpu([model,controlnet])
+            mm.load_models_gpu([model,])
             #mm.load_model_gpu(controlnet)
             pbar.update(1)
             x = denoise_controlnet(
