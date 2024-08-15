@@ -268,10 +268,7 @@ class XlabsSampler:
 
 
         total_vram = mm.total_vram
-        if controlnet_condition is None:
-            mm.load_model_gpu(model)
-        else:
-            mm.load_models_gpu([model, controlnet_condition['model']])
+        mm.load_model_gpu(model)
         pbar.update(5)
         inmodel = model.model
         #print(conditioning[0][0].shape) #//t5
