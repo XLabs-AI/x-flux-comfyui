@@ -272,7 +272,10 @@ class XlabsSampler:
         #print(conditioning[0][0].shape) #//t5
         #print(conditioning[0][1]['pooled_output'].shape) #//clip
         #print(latent_image['samples'].shape) #// torch.Size([1, 4, 64, 64]) // bc, 4, w//8, h//8
-        guidance=conditioning[0][1]['guidance']
+        try:
+            guidance=conditioning[0][1]['guidance']
+        except:
+            guidance=1.0
         
         device=mm.get_torch_device()
         dtype_model = torch.bfloat16#model.model.diffusion_model.img_in.weight.dtype
