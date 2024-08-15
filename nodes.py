@@ -26,9 +26,9 @@ from comfy.utils import get_attr, set_attr
 
 
 dir_loras = os.path.join(folder_paths.models_dir, "loras")
-os.makedirs(dir_xlabs_loras, exist_ok=True)
+os.makedirs(dir_loras, exist_ok=True)
 dir_controlnets = os.path.join(folder_paths.models_dir, "controlnet")
-os.makedirs(dir_xlabs_controlnets, exist_ok=True)
+os.makedirs(dir_controlnets, exist_ok=True)
 dir_flux = os.path.join(folder_paths.models_dir, "unet")
 os.makedirs(dir_flux, exist_ok=True)
 
