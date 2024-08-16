@@ -212,6 +212,16 @@ def denoise_controlnet(
     guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
     for t_curr, t_prev in zip(timesteps[:-1], timesteps[1:]):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
+        
+
+        controlnet.to(img.device, dtype=img.dtype)
+        img_ids.to(img.device, dtype=img.dtype)
+        controlnet_cond.to(img.device, dtype=img.dtype)
+        txt.to(img.device, dtype=img.dtype)
+        txt_ids.to(img.device, dtype=img.dtype)
+        vec.to(img.device, dtype=img.dtype)
+        t_vec.to(img.device, dtype=img.dtype)
+        guidance_vec.to(img.device, dtype=img.dtype)
         block_res_samples = controlnet(
                     img=img,
                     img_ids=img_ids,
