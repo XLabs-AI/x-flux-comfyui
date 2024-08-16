@@ -309,7 +309,7 @@ class XlabsSampler:
         timesteps = get_schedule(
             steps,
             (width // 8) * (height // 8) // 4,
-            shift=False,
+            shift=True,
         )
         try:
             inmodel.to(device)
