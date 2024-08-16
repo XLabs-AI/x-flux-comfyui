@@ -4,6 +4,7 @@ from typing import Callable
 import torch
 from einops import rearrange, repeat
 from torch import Tensor
+import numpy as np
 
 #from .modules.conditioner import HFEmbedder
 from .layers import timestep_embedding
@@ -158,7 +159,7 @@ def denoise(
     i = 0
     
     if image2image_strength is not None and orig_image is not None:
-        t_idx = int((1 - torch.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
+        t_idx = int((1 - np.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
         t = timesteps[t_idx]
         timesteps = timesteps[t_idx:]
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
@@ -224,7 +225,7 @@ def denoise_controlnet(
 
     #init_latents = rearrange(init_latents, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
     if image2image_strength is not None and orig_image is not None:
-        t_idx = int((1 - torch.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
+        t_idx = int((1 - np.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
         t = timesteps[t_idx]
         timesteps = timesteps[t_idx:]
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
