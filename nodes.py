@@ -245,6 +245,7 @@ class XlabsSampler:
                     "steps": ("INT",  {"default": 20, "min": 1, "max": 100}),
                     "timestep_to_start_cfg": ("INT",  {"default": 20, "min": 0, "max": 100}),
                     "true_gs": ("FLOAT",  {"default": 3, "min": 0, "max": 100}),
+                    "image_to_image_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0}),
                 },
             "optional": {
                     "latent_image": ("LATENT", {"default": None}),
@@ -257,7 +258,7 @@ class XlabsSampler:
     FUNCTION = "sampling"
     CATEGORY = "XLabsNodes"
 
-    def sampling(self, model, conditioning, neg_conditioning, noise_seed, steps, timestep_to_start_cfg, true_gs, latent_image=None, controlnet_condition=None):
+    def sampling(self, model, conditioning, neg_conditioning, noise_seed, steps, timestep_to_start_cfg, true_gs, image_to_image_strength, latent_image=None, controlnet_condition=None):
         additional_steps = 11
         if controlnet_condition is None:
             additional_steps = 11
@@ -286,18 +287,21 @@ class XlabsSampler:
         bc, c, h, w = latent_image['samples'].shape
         height=h*8
         width=w*8
-        
+
+        x = get_noise(
+            bc, height, width, device=device,
+            dtype=dtype_model, seed=noise_seed
+        )        
+        x.to(device)
+        x.to(dtype=dtype_model)
+        orig_x = None
         if c==16:
-            x=latent_image['samples']
+            orig_x=latent_image['samples']
             lat_processor2 = LATENT_PROCESSOR_COMFY()
-            x=lat_processor2.go_back(x)
-            x.to(dtype=dtype_model)
-            x.to(device)
-        else:
-            x = get_noise(
-                1, height, width, device=device,
-                dtype=dtype_model, seed=noise_seed
-            )
+            orig_x=lat_processor2.go_back(orig_x)
+            orig_x.to(dtype=dtype_model)
+            orig_x.to(device)
+        
         
         timesteps = get_schedule(
             steps,
@@ -322,7 +326,9 @@ class XlabsSampler:
                 neg_txt=neg_inp_cond['txt'],
                 neg_txt_ids=neg_inp_cond['txt_ids'],
                 neg_vec=neg_inp_cond['vec'],
-                true_gs=true_gs
+                true_gs=true_gs,
+                image2image_strength=image_to_image_strength,
+                orig_image=orig_x,
             )
         
         else:
@@ -346,7 +352,9 @@ class XlabsSampler:
                 neg_txt_ids=neg_inp_cond['txt_ids'],
                 neg_vec=neg_inp_cond['vec'],
                 true_gs=true_gs,
-                controlnet_gs=controlnet_strength
+                controlnet_gs=controlnet_strength,
+                image2image_strength=image_to_image_strength,
+                orig_image=orig_x,
             )
             #controlnet.to(offload_device)
         
