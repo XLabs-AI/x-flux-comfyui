@@ -1,0 +1,15 @@
+[project]
+name = "x-flux-comfyui"
+description = "Nodes:Load Flux LoRA, Load Flux ControlNet, Apply Flux ControlNet, Xlabs Sampler"
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["GitPython", "einops==0.8.0", "transformers", "diffusers", "sentencepiece"]
+
+[project.urls]
+Repository = "https://github.com/XLabs-AI/x-flux-comfyui"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "x-flux-comfyui"
+Icon = ""
