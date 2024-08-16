@@ -245,14 +245,13 @@ class XlabsSampler:
                     "steps": ("INT",  {"default": 20, "min": 1, "max": 100}),
                     "timestep_to_start_cfg": ("INT",  {"default": 20, "min": 0, "max": 100}),
                     "true_gs": ("FLOAT",  {"default": 3, "min": 0, "max": 100}),
-                    "image_to_image_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0}),
+                    "image_to_image_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                 },
             "optional": {
                     "latent_image": ("LATENT", {"default": None}),
                     "controlnet_condition": ("ControlNetCondition", {"default": None}),
-                    
-                     }
                 }
+            }
     RETURN_TYPES = ("LATENT",)
     RETURN_NAMES = ("latent",)
     FUNCTION = "sampling"
