@@ -8,7 +8,7 @@ import numpy as np
 
 #from .modules.conditioner import HFEmbedder
 from .layers import timestep_embedding
-
+from tqdm.auto import tqdm
 
 def model_forward(
     model,
@@ -175,7 +175,7 @@ def denoise(
     else:
         # this is ignored for schnell
         guidance_vec = None
-    for t_curr, t_prev in zip(timesteps[:-1], timesteps[1:]):
+    for t_curr, t_prev in tqdm(zip(timesteps[:-1], timesteps[1:]), desc="Sampling"):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
         pred = model_forward(
             model,
@@ -248,7 +248,7 @@ def denoise_controlnet(
     else:
         # this is ignored for schnell
         guidance_vec = None
-    for t_curr, t_prev in zip(timesteps[:-1], timesteps[1:]):
+    for t_curr, t_prev in tqdm(zip(timesteps[:-1], timesteps[1:]), desc="Sampling"):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
         guidance_vec=guidance_vec.to(img.device, dtype=img.dtype)
         block_res_samples = controlnet(

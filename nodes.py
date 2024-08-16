@@ -110,6 +110,7 @@ class LoadFluxLora:
         checkpoint, lora_rank = load_flux_lora(os.path.join(dir_xlabs_loras, lora_name))
         pbar.update(1)
         if not is_patched:
+            print("We are patching diffusion model, be patient please")
             patches=FluxUpdateModules(tyanochky)
             set_attn_processor(model.model.diffusion_model, DoubleStreamBlockProcessor())
         else:
