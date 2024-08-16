@@ -4,13 +4,12 @@ from typing import Callable
 import torch
 from einops import rearrange, repeat
 from torch import Tensor, nn
-
+import numpy as np
+from tqdm.auto import tqdm
 #from .modules.conditioner import HFEmbedder
 from .layers import timestep_embedding
 
 import copy
-
-
 class UpcastTo:
     def __init__(self, dtype):
         self.dtype = dtype
@@ -28,7 +27,6 @@ class UpcastTo:
         x = lcp(*modified_args, **modified_kwargs)
         #layer.to(orig_dtype)
         return x
-
 
 def model_forward(
     model,
@@ -175,11 +173,29 @@ def denoise(
     guidance: float = 4.0,
     true_gs = 1,
     timestep_to_start_cfg=0,
+    image2image_strength=None,
+    orig_image = None,
 ):
     i = 0
-    # this is ignored for schnell
-    guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
-    for t_curr, t_prev in zip(timesteps[:-1], timesteps[1:]):
+    
+      #init_latents = rearrange(init_latents, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
+    if image2image_strength is not None and orig_image is not None:
+        
+        t_idx = int((1 - np.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
+        t = timesteps[t_idx]
+        timesteps = timesteps[t_idx:]
+        orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2).to(img.device, dtype = img.dtype)
+        img = t * img + (1.0 - t) * orig_image
+    img_ids=img_ids.to(img.device, dtype=img.dtype)
+    txt=txt.to(img.device, dtype=img.dtype)
+    txt_ids=txt_ids.to(img.device, dtype=img.dtype)
+    vec=vec.to(img.device, dtype=img.dtype)
+    if hasattr(model, "guidance_in"):
+        guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
+    else:
+        # this is ignored for schnell
+        guidance_vec = None
+    for t_curr, t_prev in tqdm(zip(timesteps[:-1], timesteps[1:]), desc="Sampling", total = len(timesteps)-1):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
         pred = model_forward(
             model,
@@ -228,13 +244,33 @@ def denoise_controlnet(
     true_gs = 1,
     controlnet_gs=0.7,
     timestep_to_start_cfg=0,
+    image2image_strength=None,
+    orig_image = None,
 ):
-    # this is ignored for schnell
     i = 0
 
-    guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
-    for t_curr, t_prev in zip(timesteps[:-1], timesteps[1:]):
+    #init_latents = rearrange(init_latents, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
+    if image2image_strength is not None and orig_image is not None:
+        
+        t_idx = int((np.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
+        t = timesteps[t_idx]
+        timesteps = timesteps[t_idx:]
+        orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2).to(img.device, dtype = img.dtype)
+        img = t * img + (1.0 - t) * orig_image
+    controlnet.to(img.device, dtype=img.dtype)
+    img_ids=img_ids.to(img.device, dtype=img.dtype)
+    controlnet_cond=controlnet_cond.to(img.device, dtype=img.dtype)
+    txt=txt.to(img.device, dtype=img.dtype)
+    txt_ids=txt_ids.to(img.device, dtype=img.dtype)
+    vec=vec.to(img.device, dtype=img.dtype)
+    if hasattr(model, "guidance_in"):
+        guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
+    else:
+        # this is ignored for schnell
+        guidance_vec = None
+    for t_curr, t_prev in tqdm(zip(timesteps[:-1], timesteps[1:]), desc="Sampling", total = len(timesteps)-1):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
+        guidance_vec=guidance_vec.to(img.device, dtype=img.dtype)
         block_res_samples = controlnet(
                     img=img,
                     img_ids=img_ids,

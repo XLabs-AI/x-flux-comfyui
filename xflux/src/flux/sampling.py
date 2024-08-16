@@ -110,10 +110,22 @@ def denoise(
     guidance: float = 4.0,
     true_gs = 1,
     timestep_to_start_cfg=0,
+    image2image_strength=None,
+    orig_image = None,
 ):
     i = 0
+
+    #init_latents = rearrange(init_latents, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
+    if image2image_strength is not None and orig_image is not None:
+        t_idx = int((1 - image2image_strength) * len(timesteps))
+        t = timesteps[t_idx]
+        timesteps = timesteps[t_idx:]
+        img = t * img + (1.0 - t) * orig_image.to(img.dtype)
     # this is ignored for schnell
-    guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
+    if hasattr(model, "guidance_in"):
+        guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
+    else:
+        guidance_vec = None
     for t_curr, t_prev in zip(timesteps[:-1], timesteps[1:]):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
         pred = model(
@@ -159,10 +171,22 @@ def denoise_controlnet(
     true_gs = 1,
     controlnet_gs=0.7,
     timestep_to_start_cfg=0,
+    image2image_strength=None,
+    orig_image = None,
 ):
-    # this is ignored for schnell
     i = 0
-    guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
+
+    #init_latents = rearrange(init_latents, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
+    if image2image_strength is not None and orig_image is not None:
+        t_idx = int((1 - image2image_strength) * len(timesteps))
+        t = timesteps[t_idx]
+        timesteps = timesteps[t_idx:]
+        img = t * img + (1.0 - t) * orig_image.to(img.dtype)
+    # this is ignored for schnell
+    if hasattr(model, "guidance_in"):
+        guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
+    else:
+        guidance_vec = None
     for t_curr, t_prev in zip(timesteps[:-1], timesteps[1:]):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
         block_res_samples = controlnet(
