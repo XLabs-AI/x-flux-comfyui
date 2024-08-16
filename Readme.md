@@ -17,7 +17,7 @@ For controlnet you need install https://github.com/Fannovel16/comfyui_controlnet
 ```bash
 python3 main.py --lowvram --preview-method auto --use-split-cross-attention
 ```
-Use flux1-dev-Q4_0.gguf from this repo https://github.com/city96/ComfyUI-GGUF
+Use flux1-dev-Q4_0.gguf from this repo https://github.com/city96/ComfyUI-GGUF <br/>
 Memory usage 12gb vram
 ## Models
 
