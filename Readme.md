@@ -13,12 +13,18 @@ After the first launch, the `ComfyUI/models/xlabs/loras` and `ComfyUI/models/xla
 So, to use lora or controlnet just put models in these folders. <br/>
 After that, you may need to click "Refresh" in the user-friendly interface to use the models. <br/>
 For controlnet you need install https://github.com/Fannovel16/comfyui_controlnet_aux <br/>
-## Low memeory mode
+## Low memory mode
+You can launch Flux utilizing 12GB VRAM memory usage.
+1. Follow installation as described in repo https://github.com/city96/ComfyUI-GGUF
+2. Use flux1-dev-Q4_0.gguf from repo https://github.com/city96/ComfyUI-GGUF <br/>
+3. Launch ComfyUI with parameters:
 ```bash
 python3 main.py --lowvram --preview-method auto --use-split-cross-attention
 ```
-Use flux1-dev-Q4_0.gguf from this repo https://github.com/city96/ComfyUI-GGUF <br/>
-Memory usage 12gb vram
+In our workflows, replace "Load Diffusion Model" node with "Unet Loader (GGUF)"
+
+![FLUX Finetuning scripts](./assets/low_memory_mode.png)
+
 ## Models
 
 We trained **Canny ControlNet**, **Depth ControlNet**, **HED ControlNet** and **LoRA** checkpoints for [`FLUX.1 [dev]`](https://github.com/black-forest-labs/flux) <br/>
