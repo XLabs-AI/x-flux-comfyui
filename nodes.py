@@ -290,17 +290,13 @@ class XlabsSampler:
         x = get_noise(
             bc, height, width, device=device,
             dtype=dtype_model, seed=noise_seed
-        )        
-        x.to(device)
-        x.to(dtype=dtype_model)
+        )
         orig_x = None
         if c==16:
             orig_x=latent_image['samples']
             lat_processor2 = LATENT_PROCESSOR_COMFY()
             orig_x=lat_processor2.go_back(orig_x)
-            orig_x.to(dtype=dtype_model)
-            orig_x.to(device)
-        
+            orig_x=orig_x.to(device, dtype=dtype_model)
         
         timesteps = get_schedule(
             steps,
@@ -337,7 +333,7 @@ class XlabsSampler:
             controlnet_image = torch.nn.functional.interpolate(controlnet_image, size=(height, width), scale_factor=None, mode='bicubic',)
             controlnet_strength = controlnet_condition['controlnet_strength']
             controlnet.to(device, dtype=dtype_model)
-            controlnet_image.to(device, dtype=dtype_model)
+            controlnet_image=controlnet_image.to(device, dtype=dtype_model)
             mm.load_models_gpu([model,])
             #mm.load_model_gpu(controlnet)
             pbar.update(1)

@@ -164,11 +164,12 @@ def denoise(
         t_idx = int((1 - np.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
         t = timesteps[t_idx]
         timesteps = timesteps[t_idx:]
-        orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
-        orig_image.to(img.device)
-        print(img.device, orig_image.device)
-        img = float(0.0+t) * img + (1.0 - t) * orig_image.to(img.dtype)
-    
+        orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2).to(img.device, dtype = img.dtype)
+    img = t * img + (1.0 - t) * orig_image
+    img_ids=img_ids.to(img.device, dtype=img.dtype)
+    txt=txt.to(img.device, dtype=img.dtype)
+    txt_ids=txt_ids.to(img.device, dtype=img.dtype)
+    vec=vec.to(img.device, dtype=img.dtype)
     if hasattr(model, "guidance_in"):
         guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
     else:
@@ -234,11 +235,14 @@ def denoise_controlnet(
         t_idx = int((1 - np.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
         t = timesteps[t_idx]
         timesteps = timesteps[t_idx:]
-        orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
-        orig_image.to(img.device)
-        print(img.device, orig_image.device)
-        img = float(0.0+t) * img + (1.0 - t) * orig_image.to(img.dtype)
-    
+        orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2).to(img.device, dtype = img.dtype)
+        img = t * img + (1.0 - t) * orig_image
+    controlnet.to(img.device, dtype=img.dtype)
+    img_ids=img_ids.to(img.device, dtype=img.dtype)
+    controlnet_cond=controlnet_cond.to(img.device, dtype=img.dtype)
+    txt=txt.to(img.device, dtype=img.dtype)
+    txt_ids=txt_ids.to(img.device, dtype=img.dtype)
+    vec=vec.to(img.device, dtype=img.dtype)
     if hasattr(model, "guidance_in"):
         guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
     else:
@@ -246,15 +250,7 @@ def denoise_controlnet(
         guidance_vec = None
     for t_curr, t_prev in zip(timesteps[:-1], timesteps[1:]):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
-
-        controlnet.to(img.device, dtype=img.dtype)
-        img_ids.to(img.device, dtype=img.dtype)
-        controlnet_cond.to(img.device, dtype=img.dtype)
-        txt.to(img.device, dtype=img.dtype)
-        txt_ids.to(img.device, dtype=img.dtype)
-        vec.to(img.device, dtype=img.dtype)
-        t_vec.to(img.device, dtype=img.dtype)
-        guidance_vec.to(img.device, dtype=img.dtype)
+        guidance_vec=guidance_vec.to(img.device, dtype=img.dtype)
         block_res_samples = controlnet(
                     img=img,
                     img_ids=img_ids,
