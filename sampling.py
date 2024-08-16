@@ -166,6 +166,7 @@ def denoise(
         timesteps = timesteps[t_idx:]
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
         orig_image.to(img.device)
+        print(img.device, orig_image.device)
         img = float(0.0+t) * img + (1.0 - t) * orig_image.to(img.dtype)
     
     if hasattr(model, "guidance_in"):
@@ -235,6 +236,7 @@ def denoise_controlnet(
         timesteps = timesteps[t_idx:]
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
         orig_image.to(img.device)
+        print(img.device, orig_image.device)
         img = float(0.0+t) * img + (1.0 - t) * orig_image.to(img.dtype)
     
     if hasattr(model, "guidance_in"):
