@@ -165,7 +165,7 @@ def denoise(
         t = timesteps[t_idx]
         timesteps = timesteps[t_idx:]
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2).to(img.device, dtype = img.dtype)
-    img = t * orig_image + (1.0 - t) * img
+        img = t * img + (1.0 - t) * orig_image
     img_ids=img_ids.to(img.device, dtype=img.dtype)
     txt=txt.to(img.device, dtype=img.dtype)
     txt_ids=txt_ids.to(img.device, dtype=img.dtype)
@@ -175,7 +175,7 @@ def denoise(
     else:
         # this is ignored for schnell
         guidance_vec = None
-    for t_curr, t_prev in tqdm(zip(timesteps[:-1], timesteps[1:]), desc="Sampling"):
+    for t_curr, t_prev in tqdm(zip(timesteps[:-1], timesteps[1:]), desc="Sampling", total = len(timesteps)-1):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
         pred = model_forward(
             model,
@@ -232,11 +232,11 @@ def denoise_controlnet(
     #init_latents = rearrange(init_latents, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
     if image2image_strength is not None and orig_image is not None:
         
-        t_idx = int((1 - np.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
+        t_idx = int((np.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
         t = timesteps[t_idx]
         timesteps = timesteps[t_idx:]
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2).to(img.device, dtype = img.dtype)
-        img = t * orig_image + (1.0 - t) * img
+        img = t * img + (1.0 - t) * orig_image
     controlnet.to(img.device, dtype=img.dtype)
     img_ids=img_ids.to(img.device, dtype=img.dtype)
     controlnet_cond=controlnet_cond.to(img.device, dtype=img.dtype)
@@ -248,7 +248,7 @@ def denoise_controlnet(
     else:
         # this is ignored for schnell
         guidance_vec = None
-    for t_curr, t_prev in tqdm(zip(timesteps[:-1], timesteps[1:]), desc="Sampling"):
+    for t_curr, t_prev in tqdm(zip(timesteps[:-1], timesteps[1:]), desc="Sampling", total = len(timesteps)-1):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
         guidance_vec=guidance_vec.to(img.device, dtype=img.dtype)
         block_res_samples = controlnet(
