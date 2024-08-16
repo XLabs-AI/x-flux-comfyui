@@ -11,11 +11,11 @@ import torch
 
 from .xflux.src.flux.util import (configs, load_ae, load_clip,
                             load_flow_model, load_t5, load_safetensors, load_from_repo_id,
-                            load_controlnet, Annotator)
+                            load_controlnet)
 
 
 from .utils import (FluxUpdateModules, attn_processors, set_attn_processor, 
-                is_model_pathched, merge_loras, tensor_to_pil, LATENT_PROCESSOR_COMFY,
+                is_model_pathched, merge_loras, LATENT_PROCESSOR_COMFY,
                 comfy_to_xlabs_lora, check_is_comfy_lora)
 from .layers import DoubleStreamBlockLoraProcessor, DoubleStreamBlockProcessor, DoubleStreamBlockLorasMixerProcessor
 from .xflux.src.flux.model import Flux as ModFlux
@@ -87,14 +87,21 @@ class LoadFluxLora:
     def loadmodel(self, model, lora_name, strength_model):
         debug=False
      
-        pbar = ProgressBar(5)
+        
         device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
         
         is_patched = is_model_pathched(model.model)
         
         print(f"Is model already patched? {is_patched}")
-        
+        mul = 1 
+        if is_patched:
+            pbar = ProgressBar(5)
+        else:
+            mul = 3
+            count = len(model.model.diffusion_model.double_blocks)
+            pbar = ProgressBar(5*mul+count)
+            
         bi = model.clone()
         tyanochky = bi.model
         
@@ -105,16 +112,17 @@ class LoadFluxLora:
             except:
                 pass
         
-        pbar.update(1)
+        pbar.update(mul)
         bi.model.to(device)
         checkpoint, lora_rank = load_flux_lora(os.path.join(dir_xlabs_loras, lora_name))
-        pbar.update(1)
+        pbar.update(mul)
         if not is_patched:
-            patches=FluxUpdateModules(tyanochky)
+            print("We are patching diffusion model, be patient please")
+            patches=FluxUpdateModules(tyanochky, pbar)
             set_attn_processor(model.model.diffusion_model, DoubleStreamBlockProcessor())
         else:
             print("Model already updated")
-        pbar.update(1)
+        pbar.update(mul)
         #TYANOCHKYBY=16
         
         lora_attn_procs = {}   
@@ -133,7 +141,7 @@ class LoadFluxLora:
                 tmp=DoubleStreamBlockLorasMixerProcessor()
                 tmp.add_lora(lora_attn_procs[name])
                 lora_attn_procs[name]=tmp
-                pbar.update(1)
+                pbar.update(mul)
         #set_attn_processor(tyanochky.diffusion_model, lora_attn_procs)
         if debug:
             try:
@@ -168,7 +176,7 @@ class LoadFluxLora:
                 break
             
         #print(get_attr(tyanochky, "diffusion_model.double_blocks.0.processor"))
-        pbar.update(1)
+        pbar.update(mul)
         return (bi,)
 
 def load_checkpoint_controlnet(local_path):
@@ -245,19 +253,19 @@ class XlabsSampler:
                     "steps": ("INT",  {"default": 20, "min": 1, "max": 100}),
                     "timestep_to_start_cfg": ("INT",  {"default": 20, "min": 0, "max": 100}),
                     "true_gs": ("FLOAT",  {"default": 3, "min": 0, "max": 100}),
+                    "image_to_image_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                 },
             "optional": {
                     "latent_image": ("LATENT", {"default": None}),
                     "controlnet_condition": ("ControlNetCondition", {"default": None}),
-                    
-                     }
                 }
+            }
     RETURN_TYPES = ("LATENT",)
     RETURN_NAMES = ("latent",)
     FUNCTION = "sampling"
     CATEGORY = "XLabsNodes"
 
-    def sampling(self, model, conditioning, neg_conditioning, noise_seed, steps, timestep_to_start_cfg, true_gs, latent_image=None, controlnet_condition=None):
+    def sampling(self, model, conditioning, neg_conditioning, noise_seed, steps, timestep_to_start_cfg, true_gs, image_to_image_strength, latent_image=None, controlnet_condition=None):
         additional_steps = 11
         if controlnet_condition is None:
             additional_steps = 11
@@ -274,7 +282,10 @@ class XlabsSampler:
         #print(conditioning[0][0].shape) #//t5
         #print(conditioning[0][1]['pooled_output'].shape) #//clip
         #print(latent_image['samples'].shape) #// torch.Size([1, 4, 64, 64]) // bc, 4, w//8, h//8
-        guidance=conditioning[0][1]['guidance']
+        try:
+            guidance=conditioning[0][1]['guidance']
+        except:
+            guidance=1.0
         
         device=mm.get_torch_device()
         dtype_model = torch.bfloat16#
@@ -286,18 +297,17 @@ class XlabsSampler:
         bc, c, h, w = latent_image['samples'].shape
         height=h*8
         width=w*8
-        
-        if c==16:
-            x=latent_image['samples']
-            lat_processor2 = LATENT_PROCESSOR_COMFY()
-            x=lat_processor2.go_back(x)
-            x.to(dtype=dtype_model)
 
-        else:
-            x = get_noise(
-                1, height, width, device=device,
-                dtype=dtype_model, seed=noise_seed
-            )
+        x = get_noise(
+            bc, height, width, device=device,
+            dtype=dtype_model, seed=noise_seed
+        )
+        orig_x = None
+        if c==16:
+            orig_x=latent_image['samples']
+            lat_processor2 = LATENT_PROCESSOR_COMFY()
+            orig_x=lat_processor2.go_back(orig_x)
+            orig_x=orig_x.to(device, dtype=dtype_model)
         
         timesteps = get_schedule(
             steps,
@@ -324,16 +334,20 @@ class XlabsSampler:
                 neg_txt=neg_inp_cond['txt'],
                 neg_txt_ids=neg_inp_cond['txt_ids'],
                 neg_vec=neg_inp_cond['vec'],
-                true_gs=true_gs
+                true_gs=true_gs,
+                image2image_strength=image_to_image_strength,
+                orig_image=orig_x,
             )
         
         else:
+            
             controlnet = controlnet_condition['model']
             controlnet_image = controlnet_condition['img']
             controlnet_image = torch.nn.functional.interpolate(controlnet_image, size=(height, width), scale_factor=None, mode='bicubic',)
             controlnet_strength = controlnet_condition['controlnet_strength']
             controlnet.to(device, dtype=dtype_model)
-            controlnet_image.to(device, dtype=dtype_model)
+            controlnet_image=controlnet_image.to(device, dtype=dtype_model)
+            mm.load_models_gpu([model,])
             #mm.load_model_gpu(controlnet)
             pbar.update(1)
             x = denoise_controlnet(
@@ -346,7 +360,9 @@ class XlabsSampler:
                 neg_txt_ids=neg_inp_cond['txt_ids'],
                 neg_vec=neg_inp_cond['vec'],
                 true_gs=true_gs,
-                controlnet_gs=controlnet_strength
+                controlnet_gs=controlnet_strength,
+                image2image_strength=image_to_image_strength,
+                orig_image=orig_x,
             )
             #controlnet.to(offload_device)
         

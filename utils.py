@@ -5,7 +5,9 @@ from .xflux.src.flux.modules.layers import DoubleStreamBlock as DSBnew
 from .layers import DoubleStreamBlockLoraProcessor, DoubleStreamBlockProcessor, DoubleStreamBlockLorasMixerProcessor
 
 from comfy.utils import get_attr, set_attr
-        
+
+import numpy as np
+
 def CopyDSB(oldDSB):
     
     if isinstance(oldDSB, DSBold):
@@ -36,8 +38,33 @@ def copy_model(orig, new):
     for i in range(count):
         new.model.diffusion_model.double_blocks[i] = copy.copy(orig.model.diffusion_model.double_blocks[i])
         new.model.diffusion_model.double_blocks[i].load_state_dict(orig.model.diffusion_model.double_blocks[0].state_dict())
-    
-def FluxUpdateModules(flux_model):
+"""
+class PbarWrapper:
+    def __init__(self):
+        self.count = 1
+        self.weights = []
+        self.counts = []
+        self.w8ts = []
+        self.rn = 0
+        self.rnf = 0.0
+    def add(self, count, weight):
+        self.weights.append(weight)
+        self.counts.append(count)
+        wa = np.array(self.weights)
+        wa = wa/np.sum(wa)
+        ca = np.array(self.counts)
+        ml = np.multiply(ca, wa)
+        cas = np.sum(ml)
+        self.count=int(cas)
+        self.w8ts = wa.tolist()
+    def start(self):
+        self.rnf = 0.0
+        self.rn = 0
+    def __call__(self):
+        self.rn+=1
+        return 1
+"""
+def FluxUpdateModules(flux_model, pbar=None):
     save_list = {}
     #print((flux_model.diffusion_model.double_blocks))
     #for k,v in flux_model.diffusion_model.double_blocks:
@@ -46,6 +73,8 @@ def FluxUpdateModules(flux_model):
     patches = {}
     
     for i in range(count):
+        if pbar is not None:
+            pbar.update(1)
         patches[f"double_blocks.{i}"]=CopyDSB(flux_model.diffusion_model.double_blocks[i])
         flux_model.diffusion_model.double_blocks[i]=CopyDSB(flux_model.diffusion_model.double_blocks[i])
     return patches
@@ -150,33 +179,6 @@ def set_attn_processor(model_flux, processor):
 
     for name, module in model_flux.named_children():
         fn_recursive_attn_processor(name, module, processor)
-
-import torch
-from PIL import Image
-
-def tensor_to_pil(tensor):
-    # Убедитесь, что тензор имеет правильную форму
-    if tensor.dim() != 4 or tensor.size(0) < 1:
-        raise ValueError("Тензор должен иметь форму [batch, h, w, c]")
-    
-    # Извлекаем первую картинку из батча
-    img_tensor = tensor[0]  # [h, w, c]
-    
-    # Определяем диапазон значений
-    value_range = (img_tensor.min(), img_tensor.max())
-    
-    # Преобразуем тензор в numpy массив
-    img_numpy = img_tensor.numpy()  # [c, h, w] -> [h, w, c]
-    
-    # Нормализуем значения в диапазон [0, 1], если необходимо
-    if value_range != (0, 1):
-        img_numpy = (img_numpy - value_range[0]) / (value_range[1] - value_range[0])
-    
-    # Создаем изображение PIL
-    img_pil = Image.fromarray((img_numpy * 255).astype('uint8'))
-    
-    return img_pil
-
 
 class LATENT_PROCESSOR_COMFY:
     def __init__(self):        
