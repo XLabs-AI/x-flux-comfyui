@@ -11,11 +11,11 @@ import torch
 
 from .xflux.src.flux.util import (configs, load_ae, load_clip,
                             load_flow_model, load_t5, load_safetensors, load_from_repo_id,
-                            load_controlnet, Annotator)
+                            load_controlnet)
 
 
 from .utils import (FluxUpdateModules, attn_processors, set_attn_processor, 
-                is_model_pathched, merge_loras, tensor_to_pil, LATENT_PROCESSOR_COMFY,
+                is_model_pathched, merge_loras, LATENT_PROCESSOR_COMFY,
                 comfy_to_xlabs_lora, check_is_comfy_lora)
 from .layers import DoubleStreamBlockLoraProcessor, DoubleStreamBlockProcessor, DoubleStreamBlockLorasMixerProcessor
 from .xflux.src.flux.model import Flux as ModFlux
@@ -87,14 +87,21 @@ class LoadFluxLora:
     def loadmodel(self, model, lora_name, strength_model):
         debug=False
      
-        pbar = ProgressBar(5)
+        
         device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
         
         is_patched = is_model_pathched(model.model)
         
         print(f"Is model already patched? {is_patched}")
-        
+        mul = 1 
+        if is_patched:
+            pbar = ProgressBar(5)
+        else:
+            mul = 3
+            count = len(model.model.diffusion_model.double_blocks)
+            pbar = ProgressBar(5*mul+count)
+            
         bi = model.clone()
         tyanochky = bi.model
         
@@ -105,17 +112,17 @@ class LoadFluxLora:
             except:
                 pass
         
-        pbar.update(1)
+        pbar.update(mul)
         bi.model.to(device)
         checkpoint, lora_rank = load_flux_lora(os.path.join(dir_xlabs_loras, lora_name))
-        pbar.update(1)
+        pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
-            patches=FluxUpdateModules(tyanochky)
+            patches=FluxUpdateModules(tyanochky, pbar)
             set_attn_processor(model.model.diffusion_model, DoubleStreamBlockProcessor())
         else:
             print("Model already updated")
-        pbar.update(1)
+        pbar.update(mul)
         #TYANOCHKYBY=16
         
         lora_attn_procs = {}   
@@ -134,7 +141,7 @@ class LoadFluxLora:
                 tmp=DoubleStreamBlockLorasMixerProcessor()
                 tmp.add_lora(lora_attn_procs[name])
                 lora_attn_procs[name]=tmp
-                pbar.update(1)
+                pbar.update(mul)
         #set_attn_processor(tyanochky.diffusion_model, lora_attn_procs)
         if debug:
             try:
@@ -169,7 +176,7 @@ class LoadFluxLora:
                 break
             
         #print(get_attr(tyanochky, "diffusion_model.double_blocks.0.processor"))
-        pbar.update(1)
+        pbar.update(mul)
         return (bi,)
 
 def load_checkpoint_controlnet(local_path):
