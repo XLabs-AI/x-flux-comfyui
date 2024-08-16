@@ -165,7 +165,7 @@ def denoise(
         t = timesteps[t_idx]
         timesteps = timesteps[t_idx:]
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2).to(img.device, dtype = img.dtype)
-    img = t * img + (1.0 - t) * orig_image
+    img = t * orig_image + (1.0 - t) * img
     img_ids=img_ids.to(img.device, dtype=img.dtype)
     txt=txt.to(img.device, dtype=img.dtype)
     txt_ids=txt_ids.to(img.device, dtype=img.dtype)
@@ -236,7 +236,7 @@ def denoise_controlnet(
         t = timesteps[t_idx]
         timesteps = timesteps[t_idx:]
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2).to(img.device, dtype = img.dtype)
-        img = t * img + (1.0 - t) * orig_image
+        img = t * orig_image + (1.0 - t) * img
     controlnet.to(img.device, dtype=img.dtype)
     img_ids=img_ids.to(img.device, dtype=img.dtype)
     controlnet_cond=controlnet_cond.to(img.device, dtype=img.dtype)
