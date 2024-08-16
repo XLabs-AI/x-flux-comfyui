@@ -308,7 +308,7 @@ class XlabsSampler:
         
         timesteps = get_schedule(
             steps,
-            (width // 8) * (height // 8) // (16 * 16)*2,
+            (width // 8) * (height // 8) // 4,
             shift=False,
         )
         try:
