@@ -3,3 +3,4 @@ einops==0.8.0
 transformers
 diffusers
 sentencepiece
+opencv-python
