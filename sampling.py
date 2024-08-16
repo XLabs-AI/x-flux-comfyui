@@ -156,10 +156,9 @@ def denoise(
     orig_image = None,
 ):
     i = 0
-
     
     if image2image_strength is not None and orig_image is not None:
-        t_idx = int((1 - torch.clip(image2image_strength, 0, 1)) * len(timesteps))
+        t_idx = int((1 - torch.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
         t = timesteps[t_idx]
         timesteps = timesteps[t_idx:]
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
@@ -225,7 +224,7 @@ def denoise_controlnet(
 
     #init_latents = rearrange(init_latents, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
     if image2image_strength is not None and orig_image is not None:
-        t_idx = int((1 - torch.clip(image2image_strength, 0, 1)) * len(timesteps))
+        t_idx = int((1 - torch.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
         t = timesteps[t_idx]
         timesteps = timesteps[t_idx:]
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
