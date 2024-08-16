@@ -3,7 +3,7 @@ name = "x-flux-comfyui"
 description = "Nodes:Load Flux LoRA, Load Flux ControlNet, Apply Flux ControlNet, Xlabs Sampler"
 version = "1.0.0"
 license = {file = "LICENSE"}
-dependencies = ["GitPython", "einops==0.8.0", "transformers", "diffusers", "sentencepiece"]
+dependencies = ["GitPython", "einops==0.8.0", "transformers", "diffusers", "sentencepiece", "opencv-python"]
 
 [project.urls]
 Repository = "https://github.com/XLabs-AI/x-flux-comfyui"
