@@ -252,7 +252,7 @@ class XlabsSampler:
                     "noise_seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                     "steps": ("INT",  {"default": 20, "min": 1, "max": 100}),
                     "timestep_to_start_cfg": ("INT",  {"default": 20, "min": 0, "max": 100}),
-                    "true_gs": ("FLOAT",  {"default": 3, "min": 0, "max": 100}),
+                    "true_gs": ("FLOAT",  {"default": 7, "min": 0, "max": 100}),
                     "image_to_image_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                 },
             "optional": {
@@ -272,13 +272,34 @@ class XlabsSampler:
         else:
             additional_steps=12
         pbar = ProgressBar(steps+additional_steps)
-        pbar.update(1)
-
+        inmodel = model.model        
+        device=mm.get_torch_device()
+        orig_model_dtype = model.model.diffusion_model.img_in.weight.dtype
+        offload_device=mm.unet_offload_device()
+        if torch.cuda.is_bf16_supported(): 
+            dtype_model = torch.bfloat16#
+        else:
+            dtype_model = torch.float16#
 
         total_vram = mm.total_vram
-        mm.load_model_gpu(model)
+        pbar.update(1)
+        
+        if total_vram>1024*20:
+            inmodel.diffusion_model.to(device)
+            mm.load_model_gpu(model)
+        else:
+            if orig_model_dtype==dtype_model:
+                inmodel.to(offload_device)
+            else:
+                if total_vram>1024*13:
+                    mm.load_model_gpu(model)
+            if total_vram<1024*10:
+                inmodel.to(offload_device)
+            else:
+                mm.load_model_gpu(model)
+        
         pbar.update(5)
-        inmodel = model.model
+        
         #print(conditioning[0][0].shape) #//t5
         #print(conditioning[0][1]['pooled_output'].shape) #//clip
         #print(latent_image['samples'].shape) #// torch.Size([1, 4, 64, 64]) // bc, 4, w//8, h//8
@@ -286,11 +307,7 @@ class XlabsSampler:
             guidance=conditioning[0][1]['guidance']
         except:
             guidance=1.0
-        
-        device=mm.get_torch_device()
-        dtype_model = torch.bfloat16#
-        orig_model_dtype = model.model.diffusion_model.img_in.weight.dtype
-        offload_device=mm.unet_offload_device()
+
         
         torch.manual_seed(noise_seed)
         
@@ -316,13 +333,7 @@ class XlabsSampler:
         )
         x.to(device)
         pbar.update(1)
-        if total_vram>1024*20:
-            inmodel.diffusion_model.to(device)
-        else:
-            if orig_model_dtype==torch.bfloat16:
-                inmodel.to(offload_device)
-            if total_vram<1024*10:
-                inmodel.to(offload_device)
+
         inp_cond = prepare(conditioning[0][0], conditioning[0][1]['pooled_output'], img=x)
         neg_inp_cond = prepare(neg_conditioning[0][0], neg_conditioning[0][1]['pooled_output'], img=x)
         pbar.update(2)
@@ -347,7 +358,6 @@ class XlabsSampler:
             controlnet_strength = controlnet_condition['controlnet_strength']
             controlnet.to(device, dtype=dtype_model)
             controlnet_image=controlnet_image.to(device, dtype=dtype_model)
-            mm.load_models_gpu([model,])
             #mm.load_model_gpu(controlnet)
             pbar.update(1)
             x = denoise_controlnet(
