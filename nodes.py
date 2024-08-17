@@ -286,7 +286,11 @@ class XlabsSampler:
             guidance=1.0
         
         device=mm.get_torch_device()
-        dtype_model = torch.bfloat16#model.model.diffusion_model.img_in.weight.dtype
+        if torch.cuda.is_bf16_supported(): 
+            dtype_model = torch.bfloat16#
+        else:
+            dtype_model = torch.float16#
+        #dtype_model = torch.bfloat16#model.model.diffusion_model.img_in.weight.dtype
         offload_device=mm.unet_offload_device()
         
         torch.manual_seed(noise_seed)
