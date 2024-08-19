@@ -290,7 +290,7 @@ class ImageProjModel(torch.nn.Module):
 class DoubleStreamMixerProcessor(DoubleStreamBlockLorasMixerProcessor):
     def __init__(self,):
         super().__init__()
-        self.ip_adapters = []
+        self.ip_adapters = nn.ModuleList()
         
     def add_ipadapter(self, ip_adapter):
         self.ip_adapters.append(ip_adapter)

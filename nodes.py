@@ -444,7 +444,7 @@ class ApplyFluxIPAdapter:
         return {"required": { "model": ("MODEL",),
                               "ip_adapter_flux": ("IP_ADAPTER_FLUX",),
                               "image": ("IMAGE",),
-                              "strength_model": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
+                              "strength_model": ("FLOAT", {"default": 0.6, "min": -100.0, "max": 100.0, "step": 0.01}),
                               }}
 
     RETURN_TYPES = ("MODEL",)
@@ -491,7 +491,7 @@ class ApplyFluxIPAdapter:
         #TYANOCHKYBY=16
         ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
         ip_adapter_flux['ip_adapter_proj_model'].to(dtype=torch.bfloat16)
-        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds.to(ip_projes_dev, dtype=torch.bfloat16)).to(dtype=torch.bfloat16)
+        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
         
         ipad_blocks = []
         for block in ip_adapter_flux['double_blocks']:
