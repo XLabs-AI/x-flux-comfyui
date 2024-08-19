@@ -478,7 +478,7 @@ class ApplyFluxIPAdapter:
         out = clip.model(pixel_values=pixel_values, intermediate_output=-2)
         print(out[0].shape, out[1].shape, out[2].shape)
         
-        embeds = out[2]
+        embeds = out[2].squeeze()
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
@@ -489,7 +489,7 @@ class ApplyFluxIPAdapter:
         
         #TYANOCHKYBY=16
 
-        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds).to(device)
+        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds.to(ip_adapter_flux['ip_adapter_proj_model'].device))
         
         ipad_blocks = []
         for block in ip_adapter_flux['double_blocks']:
