@@ -261,7 +261,7 @@ class IPProcessor(nn.Module):
             dropout_p=0.0, 
             is_causal=False
         )
-        ip_attention = rearrange(ip_attention, "B H L D -> B L (H D)", H=attn.num_heads, D=attn.head_dim)
+        ip_attention = rearrange(ip_attention, "B H L D -> B L (H D)", H=attn.num_heads)
         return ip_attention*self.ip_scale
 
 class ImageProjModel(torch.nn.Module):

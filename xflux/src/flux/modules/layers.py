@@ -218,8 +218,11 @@ class DoubleStreamBlockLoraProcessor(nn.Module):
         txt = txt + txt_mod2.gate * attn.txt_mlp((1 + txt_mod2.scale) * attn.txt_norm2(txt) + txt_mod2.shift)
         return img, txt
 
-class DoubleStreamBlockProcessor:
+class DoubleStreamBlockProcessor(nn.Module):
+    def __init__(self):
+        super().__init__()
     def __call__(self, attn, img, txt, vec, pe, **attention_kwargs):
+        
         img_mod1, img_mod2 = attn.img_mod(vec)
         txt_mod1, txt_mod2 = attn.txt_mod(vec)
 
