@@ -472,12 +472,12 @@ class ApplyFluxIPAdapter:
             
         bi = model.clone()
         tyanochky = bi.model
+        
         clip = ip_adapter_flux['clip_vision']
-        mm.load_model_gpu(clip.patcher)
         pixel_values = clip_preprocess(image.to(clip.load_device)).float()
         out = clip.model(pixel_values=pixel_values, intermediate_output=-2)
-        print(out)
-        print(out[0].shape, out[2].shape)
+        print(out[0].shape, out[1].shape, out[2].shape)
+        
         embeds = out[2]
         pbar.update(mul)
         if not is_patched:
