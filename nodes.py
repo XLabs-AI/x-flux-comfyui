@@ -476,17 +476,18 @@ class ApplyFluxIPAdapter:
         clip = ip_adapter_flux['clip_vision']
         pixel_values = clip_preprocess(image.to(clip.load_device)).float()
         out = clip.model(pixel_values=pixel_values, intermediate_output=-2)
-        print(out[0].shape, out[1].shape, out[2].shape)
+        #print(out[0].shape, out[1].shape, out[2].shape)
         
         embeds = out[2].squeeze()
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
             patches=FluxUpdateModules(tyanochky, pbar)
+            print("Patched succesfully!")
         else:
             print("Model already updated")
         pbar.update(mul)
-        
+    
         #TYANOCHKYBY=16
         ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
         ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds.to(ip_projes_dev))
