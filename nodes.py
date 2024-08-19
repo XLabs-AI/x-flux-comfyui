@@ -2,6 +2,7 @@ import os
 import comfy.model_management as mm
 import comfy.model_patcher as mp
 from comfy.utils import ProgressBar
+from comfy.clip_vision import load as load_clip_vision
 import copy
 
 import folder_paths
@@ -386,8 +387,8 @@ class XlabsSampler:
         return (lat_ret,)
 
 
-from comfy.clip_vision import load as load_clip_vision
-class LoadIPAdatpter:
+
+class LoadFluxIPAdatpter:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
@@ -401,11 +402,16 @@ class LoadIPAdatpter:
     FUNCTION = "loadmodel"
     CATEGORY = "XLabsNodes"
     def loadmodel(self, ipadatper, clip_vision, provider):
+        pbar = ProgressBar(6)
         device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
+        pbar.update(1)
         ret_ipa = {}
+        
         ckpt = load_safetensors(ipadatper)
+        pbar.update(1)
         clip = load_clip_vision(clip_vision)
+        pbar.update(1)
         if provider == "CPU":
             clip = clip.to(offload_device)
         else:
@@ -419,13 +425,15 @@ class LoadIPAdatpter:
                 blocks[key[len(prefix):].replace('.processor.', '.')] = value
             if key.startswith("ip_adapter_proj_model"):
                 proj[key] = value
+        pbar.update(1)
         improj = ImageProjModel(768, 4096, 4)
         improj.load_state_dict(proj)
+        pbar.update(1)
         ret_ipa["ip_adapter_proj_model"] = improj
 
         ret_ipa["double_blocks"] = torch.nn.ModuleList(IPProcessor(4096, 3072))
         ret_ipa["double_blocks"].load_state_dict(blocks)
-
+        pbar.update(1)
         return (ret_ipa,)
 
 
@@ -507,6 +515,7 @@ NODE_CLASS_MAPPINGS = {
     "ApplyFluxControlNet": ApplyFluxControlNet,
     "XlabsSampler": XlabsSampler,
     "ApplyFluxIPAdapter": ApplyFluxIPAdapter,
+    "LoadFluxIPAdatpter", LoadFluxIPAdatpter,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
@@ -514,5 +523,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ApplyFluxControlNet": "Apply Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
     "ApplyFluxIPAdapter": "Apply Flux IPAdapter",
-    
+    "LoadFluxIPAdatpter": "Load IPAdatpter Flux"
 }
