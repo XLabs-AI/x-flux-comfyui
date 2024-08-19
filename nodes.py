@@ -490,6 +490,7 @@ class ApplyFluxIPAdapter:
     
         #TYANOCHKYBY=16
         ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
+        ip_adapter_flux['ip_adapter_proj_model'].to(dtype=torch.bfloat16)
         ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds.to(ip_projes_dev, dtype=torch.bfloat16)).to(dtype=torch.bfloat16)
         
         ipad_blocks = []
