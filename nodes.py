@@ -422,7 +422,7 @@ class LoadFluxIPAdatpter:
             if key.startswith(prefix):
                 blocks[key[len(prefix):].replace('.processor.', '.')] = value
             if key.startswith("ip_adapter_proj_model"):
-                proj[key] = value
+                proj[key[len("ip_adapter_proj_model."):]] = value
         pbar.update(1)
         improj = ImageProjModel(768, 4096, 4)
         improj.load_state_dict(proj)
