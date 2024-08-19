@@ -6,6 +6,7 @@ from comfy.clip_vision import load as load_clip_vision
 import copy
 
 import folder_paths
+
 import torch
 #from .xflux.src.flux.modules.layers import DoubleStreamBlockLoraProcessor, DoubleStreamBlockProcessor
 #from .xflux.src.flux.model import Flux as ModFlux
@@ -411,7 +412,8 @@ class LoadFluxIPAdatpter:
         path = os.path.join(dir_xlabs_ipadapters, ipadatper)
         ckpt = load_safetensors(path)
         pbar.update(1)
-        clip = load_clip_vision(clip_vision)
+        path_clip = folder_paths.get_full_path("clip_vision", clip_vision)
+        clip = load_clip_vision(path_clip)
         pbar.update(1)
         if provider == "CPU":
             clip = clip.to(offload_device)
