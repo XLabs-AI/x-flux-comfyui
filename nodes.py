@@ -429,7 +429,7 @@ class LoadFluxIPAdatpter:
         pbar.update(1)
         ret_ipa["ip_adapter_proj_model"] = improj
 
-        ret_ipa["double_blocks"] = torch.nn.ModuleList(IPProcessor(4096, 3072) for i in range(19))
+        ret_ipa["double_blocks"] = torch.nn.ModuleList([IPProcessor(4096, 3072) for i in range(19)])
         ret_ipa["double_blocks"].load_state_dict(blocks)
         pbar.update(1)
         return (ret_ipa,)
