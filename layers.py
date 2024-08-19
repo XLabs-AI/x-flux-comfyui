@@ -298,7 +298,7 @@ class DoubleStreamMixerProcessor(DoubleStreamBlockLorasMixerProcessor):
         return self.ip_adapters
     def set_ip_adapters(self, ip_adapters):
         self.ip_adapters = ip_adapters
-    def shift_ip(self, img_qkv, attn):
+    def shift_ip(self, img_qkv, attn, x):
         for block in self.ip_adapters:
             x += block(img_qkv, attn)
         return x
@@ -344,7 +344,7 @@ class DoubleStreamMixerProcessor(DoubleStreamBlockLorasMixerProcessor):
         #img = img + img_mod1.gate * attn.img_attn.proj(img_attn) + img_mod1.gate * self.proj_lora1(img_attn) * self.lora_weight
         img = img + img_mod1.gate * attn.img_attn.proj(img_attn)
         self.add_shift(self.proj_lora1, img, img_attn, img_mod1.gate)
-        self.shift_ip(img_qkv, attn)
+        self.shift_ip(img_qkv, attn, img)
 
         img = img + img_mod2.gate * attn.img_mlp((1 + img_mod2.scale) * attn.img_norm2(img) + img_mod2.shift)
         
