@@ -488,7 +488,7 @@ class ApplyFluxIPAdapter:
         pbar.update(mul)
         
         #TYANOCHKYBY=16
-        ip_projes_dev = next(ip_projes.parameters()).device
+        ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
         ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds.to(ip_projes_dev))
         
         ipad_blocks = []
