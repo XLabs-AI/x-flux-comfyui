@@ -424,12 +424,12 @@ class LoadFluxIPAdatpter:
             if key.startswith("ip_adapter_proj_model"):
                 proj[key[len("ip_adapter_proj_model."):]] = value
         pbar.update(1)
-        improj = ImageProjModel(768, 4096, 4)
+        improj = ImageProjModel(4096, 768, 4)
         improj.load_state_dict(proj)
         pbar.update(1)
         ret_ipa["ip_adapter_proj_model"] = improj
 
-        ret_ipa["double_blocks"] = torch.nn.ModuleList(IPProcessor(4096, 3072))
+        ret_ipa["double_blocks"] = torch.nn.ModuleList(IPProcessor(4096, 3072) for i in range(19))
         ret_ipa["double_blocks"].load_state_dict(blocks)
         pbar.update(1)
         return (ret_ipa,)
