@@ -17,7 +17,12 @@ from .xflux.src.flux.util import (configs, load_ae, load_clip,
 from .utils import (FluxUpdateModules, attn_processors, set_attn_processor, 
                 is_model_pathched, merge_loras, LATENT_PROCESSOR_COMFY,
                 comfy_to_xlabs_lora, check_is_comfy_lora)
-from .layers import DoubleStreamBlockLoraProcessor, DoubleStreamBlockProcessor, DoubleStreamBlockLorasMixerProcessor
+from .layers import (DoubleStreamBlockLoraProcessor, 
+                     DoubleStreamBlockProcessor, 
+                     DoubleStreamBlockLorasMixerProcessor,
+                     DoubleStreamMixerProcessor,
+                     IPProcessor,
+                     ImageProjModel)
 from .xflux.src.flux.model import Flux as ModFlux
 #from .model_init import double_blocks_init, single_blocks_init
 
@@ -33,12 +38,14 @@ dir_xlabs_controlnets = os.path.join(dir_xlabs, "controlnets")
 os.makedirs(dir_xlabs_controlnets, exist_ok=True)
 dir_xlabs_flux = os.path.join(dir_xlabs, "flux")
 os.makedirs(dir_xlabs_flux, exist_ok=True)
-
+dir_xlabs_ipadapters = os.path.join(dir_xlabs, "ipadapters")
+os.makedirs(dir_xlabs_ipadapters, exist_ok=True)
 
 
 folder_paths.folder_names_and_paths["xlabs"] = ([dir_xlabs], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["xlabs_loras"] = ([dir_xlabs_loras], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["xlabs_controlnets"] = ([dir_xlabs_controlnets], folder_paths.supported_pt_extensions)
+folder_paths.folder_names_and_paths["xlabs_ipdapters"] = ([dir_xlabs_ipadapters], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["xlabs_flux"] = ([dir_xlabs_flux], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["xlabs_flux_json"] = ([dir_xlabs_flux], set({'.json',}))
 
@@ -138,7 +145,7 @@ class LoadFluxLora:
                         lora_state_dict[k[len(name) + 1:]] = checkpoint[k]
                 lora_attn_procs[name].load_state_dict(lora_state_dict)
                 lora_attn_procs[name].to(device)
-                tmp=DoubleStreamBlockLorasMixerProcessor()
+                tmp=DoubleStreamMixerProcessor()
                 tmp.add_lora(lora_attn_procs[name])
                 lora_attn_procs[name]=tmp
                 pbar.update(mul)
@@ -147,7 +154,7 @@ class LoadFluxLora:
             try:
                 if isinstance(
                         get_attr(tyanochky, "diffusion_model.double_blocks.0.processor"), 
-                        DoubleStreamBlockLorasMixerProcessor
+                        DoubleStreamMixerProcessor
                     ):
                     pedovki = get_attr(tyanochky, "diffusion_model.double_blocks.0.processor").lora_weight
                     if len(pedovki)>0:
@@ -265,7 +272,10 @@ class XlabsSampler:
     FUNCTION = "sampling"
     CATEGORY = "XLabsNodes"
 
-    def sampling(self, model, conditioning, neg_conditioning, noise_seed, steps, timestep_to_start_cfg, true_gs, image_to_image_strength, latent_image=None, controlnet_condition=None):
+    def sampling(
+            self, model, conditioning, neg_conditioning, 
+            noise_seed, steps, timestep_to_start_cfg, true_gs, 
+            image_to_image_strength, latent_image=None, controlnet_condition=None):
         additional_steps = 11
         if controlnet_condition is None:
             additional_steps = 11
@@ -342,7 +352,8 @@ class XlabsSampler:
             
             controlnet = controlnet_condition['model']
             controlnet_image = controlnet_condition['img']
-            controlnet_image = torch.nn.functional.interpolate(controlnet_image, size=(height, width), scale_factor=None, mode='bicubic',)
+            controlnet_image = torch.nn.functional.interpolate(
+                controlnet_image, size=(height, width), scale_factor=None, mode='bicubic',)
             controlnet_strength = controlnet_condition['controlnet_strength']
             controlnet.to(device, dtype=dtype_model)
             controlnet_image=controlnet_image.to(device, dtype=dtype_model)
@@ -370,102 +381,124 @@ class XlabsSampler:
         lat_processor = LATENT_PROCESSOR_COMFY()
         x=lat_processor(x)
         lat_ret = {"samples": x}
+        
         #model.model.to(offload_device)
         return (lat_ret,)
 
-"""
-import json
-from optimum.quanto import requantize
-from safetensors.torch import load_file as load_sft
-class LoadFluxModel:
+
+from comfy.clip_vision import load as load_clip_vision
+class LoadIPAdatpter:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                            #"model_name": (["flux-dev", "flux-dev-fp8", "flux-schnell"],),
-                            "model_path": (
-                                folder_paths.get_filename_list("xlabs_flux") 
-                                #+folder_paths.get_filename_list("checkpoints")
-                                #+folder_paths.get_filename_list("unet")
-                                            ,),
-                            "config_path": (
-                                folder_paths.get_filename_list("xlabs_flux_json") 
-                                #+folder_paths.get_filename_list("checkpoints")
-                                #+folder_paths.get_filename_list("unet")
-                                            ,),
+                "ipadatper": (folder_paths.get_filename_list("xlabs_ipadapters"),),
+                "clip_vision": (folder_paths.get_filename_list("clip_vision"),),
+                "provider": (["CPU", "GPU",],),
+            }
+        }
+    RETURN_TYPES = ("IP_ADAPTER_FLUX",)
+    RETURN_NAMES = ("ipadapterFlux",)
+    FUNCTION = "loadmodel"
+    CATEGORY = "XLabsNodes"
+    def loadmodel(self, ipadatper, clip_vision, provider):
+        device=mm.get_torch_device()
+        offload_device=mm.unet_offload_device()
+        ret_ipa = {}
+        ckpt = load_safetensors(ipadatper)
+        clip = load_clip_vision(clip_vision)
+        if provider == "CPU":
+            clip = clip.to(offload_device)
+        else:
+            clip = clip.to(device)
+        ret_ipa["clip_vision"] = clip
+        prefix = "double_blocks."
+        blocks = {}
+        proj = {}
+        for key, value in ckpt.items():
+            if key.startswith(prefix):
+                blocks[key[len(prefix):].replace('.processor.', '.')] = value
+            if key.startswith("ip_adapter_proj_model"):
+                proj[key] = value
+        improj = ImageProjModel(768, 4096, 4)
+        improj.load_state_dict(proj)
+        ret_ipa["ip_adapter_proj_model"] = improj
+
+        ret_ipa["double_blocks"] = torch.nn.ModuleList(IPProcessor(4096, 3072))
+        ret_ipa["double_blocks"].load_state_dict(blocks)
+
+        return (ret_ipa,)
+
+
+
+class ApplyFluxIPAdapter:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": { "model": ("MODEL",),
+                              "ip_adapter_flux": ("IP_ADAPTER_FLUX",),
+                              "image": ("IMAGE",),
+                              "strength_model": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
                               }}
 
     RETURN_TYPES = ("MODEL",)
-    RETURN_NAMES = ("model",)
-    FUNCTION = "loadmodel"
+    RETURN_NAMES = ("MODEL",)
+    FUNCTION = "applymodel"
     CATEGORY = "XLabsNodes"
 
-    def loadmodel(self, model_path, config_path):
+    def applymodel(self, model, ip_adapter_flux, image, strength_model):
+        debug=False
+     
+        
         device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
         
-        file_path_x = os.path.join(dir_xlabs_flux, config_path)
-        сkpt_path_x = os.path.join(dir_xlabs_flux, model_path)
-        #file_path_u = os.path.join(dir_xlabs_flux, config_path)
-        #file_path_c = os.path.join(dir_xlabs_flux, config_path)
-        pbar = ProgressBar(10)
-        file_path = None
-        ckpt_path = None
-        dtype = None
-        if os.path.exists(file_path_x):
-            file_path = file_path_x
-            ckpt_path = сkpt_path_x
+        is_patched = is_model_pathched(model.model)
+        
+        print(f"Is model already patched? {is_patched}")
+        mul = 1 
+        if is_patched:
+            pbar = ProgressBar(5)
         else:
-            assert("File doesn't exist")
-            return (None,)
-        try:
-            with open(file_path, 'r') as f:
-                data = json.load(f)
-            dtype = data['img_in']['weights']
-            if dtype == "fp16":
-                assert("We currently don't support fp16 type")
-                pass
-            elif dtype == "qfloat8_e4m3fn":
-                pass
+            mul = 3
+            count = len(model.model.diffusion_model.double_blocks)
+            pbar = ProgressBar(5*mul+count)
+            
+        bi = model.clone()
+        tyanochky = bi.model
+        
+        pbar.update(mul)
+        if not is_patched:
+            print("We are patching diffusion model, be patient please")
+            patches=FluxUpdateModules(tyanochky, pbar)
+        else:
+            print("Model already updated")
+        pbar.update(mul)
+        #TYANOCHKYBY=16
+        clip = ip_adapter_flux['clip_vision']
+        embeds = clip(image)
+        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds).to(device)
+
+        ipad_blocks = []
+        for block in ip_adapter_flux['double_blocks']:
+            ipad = IPProcessor(block.context_dim, block.hidden_dim, ip_projes, strength_model)
+            ipad.load_state_dict(block.state_dict())
+            npp = DoubleStreamMixerProcessor()
+            npp.add_ipadapter(ipad)
+            ipad_blocks.append(npp)
+        pbar.update(mul)
+        i=0
+        for name, _ in attn_processors(tyanochky.diffusion_model).items():
+            attribute = f"diffusion_model.{name}"
+            #old = copy.copy(get_attr(bi.model, attribute))
+            if attribute in model.object_patches.keys():
+                old = copy.copy((model.object_patches[attribute]))
             else:
-                assert("We currently don't support this type of model")
-        except:
-            assert("Something went wrong, try to reproduce again and contact with devs")
-            return (None,)
-        pbar.update(1)
-        name = model_path.split(".")[0]
-        print(name)
-        model = ModFlux(configs[name].params)
-        model.to(torch.bfloat16)
-        '''
-        pbar.update(2)
-        print("1/3 loaded")
-        double_blocks_init(model, configs[name].params, torch.bfloat16)
-        pbar.update(3)
-        print("2/3 loaded")
-        single_blocks_init(model, configs[name].params, torch.bfloat16)
-        pbar.update(4)
-        print("3/3 loaded")
-        model.to(torch.bfloat16)
-        pbar.update(5)
-        '''
-        print("Loading checkpoint")
-        # load_sft doesn't support torch.device
-        sd = load_sft(ckpt_path, device='cpu')
-        pbar.update(6)
-        with open(file_path, "r") as f:
-            quantization_map = json.load(f)
-        if dtype=="qfloat8_e4m3fn":
-            print("Start a quantization process...")
-            requantize(model, sd, quantization_map, device=torch.device('cuda'))
-            print("Model is quantized!")
-            pbar.update(7)
-        ret_controlnet = mp.Model_Patcher(model, load_device=torch.device('cpu'), offload_device=offload_device)
-        print(model)
-        print(ret_controlnet)
-        pbar.update(10)
-        return (ret_controlnet,)
-"""
-     
+                old = None
+            processor = merge_loras(old, ipad_blocks[i])
+            bi.add_object_patch(attribute, processor)
+            i+=1
+        pbar.update(mul)
+        return (bi,)
+
 
 
 NODE_CLASS_MAPPINGS = {
@@ -473,12 +506,13 @@ NODE_CLASS_MAPPINGS = {
     "LoadFluxControlNet": LoadFluxControlNet,
     "ApplyFluxControlNet": ApplyFluxControlNet,
     "XlabsSampler": XlabsSampler,
-    #"LoadFluxModel": LoadFluxModel,
+    "ApplyFluxIPAdapter": ApplyFluxIPAdapter,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
     "LoadFluxControlNet": "Load Flux ControlNet",
     "ApplyFluxControlNet": "Apply Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
-    #"LoadFluxModel": "Load Flux Model",
+    "ApplyFluxIPAdapter": "Apply Flux IPAdapter",
+    
 }

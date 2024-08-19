@@ -2,7 +2,10 @@ from comfy.ldm.flux.layers import DoubleStreamBlock as DSBold
 import copy
 import torch
 from .xflux.src.flux.modules.layers import DoubleStreamBlock as DSBnew
-from .layers import DoubleStreamBlockLoraProcessor, DoubleStreamBlockProcessor, DoubleStreamBlockLorasMixerProcessor
+from .layers import (DoubleStreamBlockLoraProcessor, 
+                     DoubleStreamBlockProcessor, 
+                     DoubleStreamBlockLorasMixerProcessor,
+                     DoubleStreamMixerProcessor)
 
 from comfy.utils import get_attr, set_attr
 
@@ -110,15 +113,17 @@ def attn_processors(model_flux):
         fn_recursive_add_processors(name, module, processors)
     return processors
 def merge_loras(lora1, lora2):
-    new_block = DoubleStreamBlockLorasMixerProcessor()
-    if isinstance(lora1, DoubleStreamBlockLorasMixerProcessor):
+    new_block = DoubleStreamMixerProcessor()
+    if isinstance(lora1, DoubleStreamMixerProcessor):
         new_block.set_loras(*lora1.get_loras())
-    elif isinstance(lora1, DoubleStreamBlockLoraProcessor):
+        new_block.set_ip_adapters(list(lora1.get_ip_adapters))
+    elif isinstance(lora1, DoubleStreamBlockLoraProcessor): 
         new_block.add_lora(lora1)
     else:
         pass
-    if isinstance(lora2, DoubleStreamBlockLorasMixerProcessor):
+    if isinstance(lora2, DoubleStreamMixerProcessor):
         new_block.set_loras(*lora2.get_loras())
+        new_block.set_ip_adapters(list(lora1.get_ip_adapters))
     elif isinstance(lora2, DoubleStreamBlockLoraProcessor):
         new_block.add_lora(lora2)
     else:
