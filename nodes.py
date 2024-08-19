@@ -489,7 +489,7 @@ class ApplyFluxIPAdapter:
         
         #TYANOCHKYBY=16
 
-        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds.to(ip_adapter_flux['ip_adapter_proj_model'].device))
+        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds.to(ip_adapter_flux['ip_adapter_proj_model'].proj.device))
         
         ipad_blocks = []
         for block in ip_adapter_flux['double_blocks']:
