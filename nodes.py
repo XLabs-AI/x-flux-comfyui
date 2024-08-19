@@ -3,6 +3,8 @@ import comfy.model_management as mm
 import comfy.model_patcher as mp
 from comfy.utils import ProgressBar
 from comfy.clip_vision import load as load_clip_vision
+from comfy.clip_vision import clip_preprocess, Output
+
 import copy
 
 import folder_paths
@@ -470,7 +472,12 @@ class ApplyFluxIPAdapter:
             
         bi = model.clone()
         tyanochky = bi.model
-        
+        clip = ip_adapter_flux['clip_vision']
+        mm.load_model_gpu(clip.patcher)
+        pixel_values = clip_preprocess(image.to(clip.load_device)).float()
+        out = clip.model(pixel_values=pixel_values, intermediate_output=-2)
+        print(out.shape)
+        embeds = out        
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
@@ -478,11 +485,11 @@ class ApplyFluxIPAdapter:
         else:
             print("Model already updated")
         pbar.update(mul)
+        
         #TYANOCHKYBY=16
-        clip = ip_adapter_flux['clip_vision']
-        embeds = clip(image)
-        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds).to(device)
 
+        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds).to(device)
+        
         ipad_blocks = []
         for block in ip_adapter_flux['double_blocks']:
             ipad = IPProcessor(block.context_dim, block.hidden_dim, ip_projes, strength_model)
