@@ -46,7 +46,7 @@ os.makedirs(dir_xlabs_ipadapters, exist_ok=True)
 folder_paths.folder_names_and_paths["xlabs"] = ([dir_xlabs], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["xlabs_loras"] = ([dir_xlabs_loras], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["xlabs_controlnets"] = ([dir_xlabs_controlnets], folder_paths.supported_pt_extensions)
-folder_paths.folder_names_and_paths["xlabs_ipdapters"] = ([dir_xlabs_ipadapters], folder_paths.supported_pt_extensions)
+folder_paths.folder_names_and_paths["xlabs_ipadapters"] = ([dir_xlabs_ipadapters], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["xlabs_flux"] = ([dir_xlabs_flux], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["xlabs_flux_json"] = ([dir_xlabs_flux], set({'.json',}))
 
@@ -401,6 +401,7 @@ class LoadFluxIPAdatpter:
     RETURN_NAMES = ("ipadapterFlux",)
     FUNCTION = "loadmodel"
     CATEGORY = "XLabsNodes"
+    
     def loadmodel(self, ipadatper, clip_vision, provider):
         pbar = ProgressBar(6)
         device=mm.get_torch_device()
@@ -523,5 +524,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ApplyFluxControlNet": "Apply Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
     "ApplyFluxIPAdapter": "Apply Flux IPAdapter",
-    "LoadFluxIPAdatpter": "Load IPAdatpter Flux"
+    "LoadFluxIPAdatpter": "Load Flux IPAdatpter"
 }
