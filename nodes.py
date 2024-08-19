@@ -476,8 +476,9 @@ class ApplyFluxIPAdapter:
         mm.load_model_gpu(clip.patcher)
         pixel_values = clip_preprocess(image.to(clip.load_device)).float()
         out = clip.model(pixel_values=pixel_values, intermediate_output=-2)
-        print(out.shape)
-        embeds = out        
+        print(out)
+        print(out[0].shape, out[2].shape)
+        embeds = out[2]
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
