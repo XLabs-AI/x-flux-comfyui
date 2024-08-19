@@ -515,7 +515,7 @@ NODE_CLASS_MAPPINGS = {
     "ApplyFluxControlNet": ApplyFluxControlNet,
     "XlabsSampler": XlabsSampler,
     "ApplyFluxIPAdapter": ApplyFluxIPAdapter,
-    "LoadFluxIPAdatpter", LoadFluxIPAdatpter,
+    "LoadFluxIPAdatpter": LoadFluxIPAdatpter,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
