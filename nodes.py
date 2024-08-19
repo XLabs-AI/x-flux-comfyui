@@ -408,8 +408,8 @@ class LoadFluxIPAdatpter:
         offload_device=mm.unet_offload_device()
         pbar.update(1)
         ret_ipa = {}
-        
-        ckpt = load_safetensors(ipadatper)
+        path = os.path.join(dir_xlabs_ipadapters, ipadatper)
+        ckpt = load_safetensors(path)
         pbar.update(1)
         clip = load_clip_vision(clip_vision)
         pbar.update(1)
