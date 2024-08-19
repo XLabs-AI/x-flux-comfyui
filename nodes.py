@@ -414,11 +414,6 @@ class LoadFluxIPAdatpter:
         pbar.update(1)
         path_clip = folder_paths.get_full_path("clip_vision", clip_vision)
         clip = load_clip_vision(path_clip)
-        pbar.update(1)
-        if provider == "CPU":
-            clip = clip.to(offload_device)
-        else:
-            clip = clip.to(device)
         ret_ipa["clip_vision"] = clip
         prefix = "double_blocks."
         blocks = {}
