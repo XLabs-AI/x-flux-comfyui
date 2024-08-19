@@ -496,6 +496,7 @@ class ApplyFluxIPAdapter:
         for block in ip_adapter_flux['double_blocks']:
             ipad = IPProcessor(block.context_dim, block.hidden_dim, ip_projes, strength_model)
             ipad.load_state_dict(block.state_dict())
+            ipad.to(dtype=torch.bfloat16)
             npp = DoubleStreamMixerProcessor()
             npp.add_ipadapter(ipad)
             ipad_blocks.append(npp)
