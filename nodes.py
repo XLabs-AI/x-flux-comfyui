@@ -511,6 +511,7 @@ class ApplyFluxIPAdapter:
             else:
                 old = None
             processor = merge_loras(old, ipad_blocks[i])
+            processor.to(device, dtype=torch.bfloat16)
             bi.add_object_patch(attribute, processor)
             i+=1
         pbar.update(mul)
