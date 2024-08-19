@@ -241,7 +241,8 @@ class IPProcessor(nn.Module):
         nn.init.zeros_(self.ip_adapter_double_stream_v_proj.bias)
 
     def forward(self, img_qkv, attn):
-        img_q, img_k, img_v = rearrange(img_qkv, "B L (K H D) -> K B H L D", K=3, H=attn.num_heads, D=attn.head_dim)
+        #img_q, img_k, img_v = rearrange(img_qkv, "B L (K H D) -> K B H L D", K=3, H=attn.num_heads, D=attn.head_dim)
+        img_q, img_k, img_v = rearrange(img_qkv, "B L (K H D) -> K B H L D", K=3, H=attn.num_heads)
         img_q, img_k = attn.img_attn.norm(img_q, img_k, img_v)
         # IP-adapter processing
         ip_query = img_q  # latent sample query
@@ -249,9 +250,9 @@ class IPProcessor(nn.Module):
         ip_value = self.ip_adapter_double_stream_v_proj(self.ip_hidden_states)
         
         # Reshape projections for multi-head attention
-        ip_key = rearrange(ip_key, 'B L (H D) -> B H L D', H=attn.num_heads, D=attn.head_dim)
-        ip_value = rearrange(ip_value, 'B L (H D) -> B H L D', H=attn.num_heads, D=attn.head_dim)
-
+        ip_key = rearrange(ip_key, 'B L (H D) -> B H L D', H=attn.num_heads)
+        ip_value = rearrange(ip_value, 'B L (H D) -> B H L D', H=attn.num_heads)
+        #img_q, img_k, img_v = rearrange(img_qkv, "B L (K H D) -> K B H L D", K=3, H=attn.num_heads)
         # Compute attention between IP projections and the latent query
         ip_attention = F.scaled_dot_product_attention(
             ip_query, 
