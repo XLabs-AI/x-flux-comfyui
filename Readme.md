@@ -35,3 +35,16 @@ You can download them on HuggingFace:
 - [flux-RealismLora](https://huggingface.co/XLabs-AI/flux-RealismLora)
 - [flux-lora-collections](https://huggingface.co/XLabs-AI/flux-lora-collection)
 - [flux-furry-lora](https://huggingface.co/XLabs-AI/flux-furry-lora)
+- [flux-ip-adapter](https://huggingface.co/XLabs-AI/flux-ip-adapter/)
+## IP Adapter
+
+### Instruction
+1. Update x-flux-comfy with `git pull` or reinstall it.
+2. Download Clip-L `model.safetensors` from [OpenAI VIT CLIP large](https://huggingface.co/openai/clip-vit-large-patch14), and put it to `ComfyUI/models/clip_vision/*`.
+3. Download our IPAdapter from [huggingface](https://huggingface.co/XLabs-AI/flux-ip-adapter/tree/main), and put it to `ComfyUI/models/xlabs/ipadapters/*`.
+4. Use `Flux Load IPAdapter` and `Apply Flux IPAdapter` nodes, choose right CLIP model and enjoy your genereations.
+5. You can find example workflow in folder workflows in this repo.
+
+### Limitations
+The IP Adapter is currently in beta.
+We do not guarantee that you will get a good result right away, it may take more attempts to get a result. But we will make efforts to make this process easier and more efficient over time.
