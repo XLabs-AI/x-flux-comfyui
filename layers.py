@@ -240,10 +240,8 @@ class IPProcessor(nn.Module):
         nn.init.zeros_(self.ip_adapter_double_stream_v_proj.weight)
         nn.init.zeros_(self.ip_adapter_double_stream_v_proj.bias)
 
-    def forward(self, img_qkv, attn):
+    def forward(self, img_q, attn):
         #img_q, img_k, img_v = rearrange(img_qkv, "B L (K H D) -> K B H L D", K=3, H=attn.num_heads, D=attn.head_dim)
-        img_q, img_k, img_v = rearrange(img_qkv, "B L (K H D) -> K B H L D", K=3, H=attn.num_heads)
-        img_q, img_k = attn.img_attn.norm(img_q, img_k, img_v)
         # IP-adapter processing
         ip_query = img_q  # latent sample query
         ip_key = self.ip_adapter_double_stream_k_proj(self.ip_hidden_states)
@@ -344,15 +342,18 @@ class DoubleStreamMixerProcessor(DoubleStreamBlockLorasMixerProcessor):
         # calculate the img bloks
         #img = img + img_mod1.gate * attn.img_attn.proj(img_attn) + img_mod1.gate * self.proj_lora1(img_attn) * self.lora_weight
         img = img + img_mod1.gate * attn.img_attn.proj(img_attn)
-        self.add_shift(self.proj_lora1, img, img_attn, img_mod1.gate)
-        self.shift_ip(img_qkv, attn, img)
-
-        img = img + img_mod2.gate * attn.img_mlp((1 + img_mod2.scale) * attn.img_norm2(img) + img_mod2.shift)
         
+        
+        img = img + img_mod2.gate * attn.img_mlp((1 + img_mod2.scale) * attn.img_norm2(img) + img_mod2.shift)
+
+        self.add_shift(self.proj_lora1, img, img_attn, img_mod1.gate)
+        self.shift_ip(img_q, attn, img)
         # calculate the txt bloks
         #txt = txt + txt_mod1.gate * attn.txt_attn.proj(txt_attn) + txt_mod1.gate * self.proj_lora2(txt_attn) * self.lora_weight
         txt = txt + txt_mod1.gate * attn.txt_attn.proj(txt_attn) 
-        self.add_shift(self.proj_lora2, txt, txt_attn, txt_mod1.gate)
+        
         
         txt = txt + txt_mod2.gate * attn.txt_mlp((1 + txt_mod2.scale) * attn.txt_norm2(txt) + txt_mod2.shift)
+        self.add_shift(self.proj_lora2, txt, txt_attn, txt_mod1.gate)
+
         return img, txt

@@ -478,7 +478,7 @@ class ApplyFluxIPAdapter:
         out = clip.model(pixel_values=pixel_values, intermediate_output=-2)
         #print(out[0].shape, out[1].shape, out[2].shape)
         
-        embeds = out[2].squeeze().to(dtype=torch.bfloat16)
+        embeds = out[2].to(dtype=torch.bfloat16)
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
