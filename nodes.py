@@ -391,7 +391,7 @@ class XlabsSampler:
 
 
 
-class LoadFluxIPAdatpter:
+class LoadFluxIPAdapter:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
@@ -433,6 +433,11 @@ class LoadFluxIPAdatpter:
 
         ret_ipa["double_blocks"] = torch.nn.ModuleList([IPProcessor(4096, 3072) for i in range(19)])
         ret_ipa["double_blocks"].load_state_dict(blocks)
+        print("\n"*3)
+        print(blocks)
+        print("\n"*3)
+        print(ret_ipa["double_blocks"])
+        print("\n"*3)
         pbar.update(1)
         return (ret_ipa,)
 
@@ -475,7 +480,7 @@ class ApplyFluxIPAdapter:
         
         clip = ip_adapter_flux['clip_vision']
         pixel_values = clip_preprocess(image.to(clip.load_device)).float()
-        out = clip.model(pixel_values=pixel_values, intermediate_output=-2)
+        out = clip.model(pixel_values=pixel_values, intermediate_output=-1)
         #print(out[0].shape, out[1].shape, out[2].shape)
         
         embeds = out[2].to(dtype=torch.bfloat16)
@@ -525,7 +530,7 @@ NODE_CLASS_MAPPINGS = {
     "ApplyFluxControlNet": ApplyFluxControlNet,
     "XlabsSampler": XlabsSampler,
     "ApplyFluxIPAdapter": ApplyFluxIPAdapter,
-    "LoadFluxIPAdatpter": LoadFluxIPAdatpter,
+    "LoadFluxIPAdapter": LoadFluxIPAdapter,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
@@ -533,5 +538,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ApplyFluxControlNet": "Apply Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
     "ApplyFluxIPAdapter": "Apply Flux IPAdapter",
-    "LoadFluxIPAdatpter": "Load Flux IPAdatpter"
+    "LoadFluxIPAdapter": "Load Flux IPAdatpter"
 }
