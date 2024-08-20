@@ -481,8 +481,8 @@ class ApplyFluxIPAdapter:
         clip = ip_adapter_flux['clip_vision']
         
         pixel_values = clip_preprocess(image.to(clip.load_device)).float()
-        out = clip.model(pixel_values=pixel_values, intermediate_output=-2)
-        neg_out = clip.model(pixel_values=torch.zeros_like(pixel_values), intermediate_output=-2)
+        out = clip.model(pixel_values=pixel_values, intermediate_output=-1)
+        neg_out = clip.model(pixel_values=torch.zeros_like(pixel_values), intermediate_output=-1)
         
         neg_out = neg_out[2].to(dtype=torch.bfloat16)
         #print(out[0].shape, out[1].shape, out[2].shape)
