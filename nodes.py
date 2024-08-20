@@ -434,9 +434,9 @@ class LoadFluxIPAdapter:
         ret_ipa["double_blocks"] = torch.nn.ModuleList([IPProcessor(4096, 3072) for i in range(19)])
         ret_ipa["double_blocks"].load_state_dict(blocks)
         print("\n"*3)
-        print(blocks)
+        print(blocks.keys())
         print("\n"*3)
-        print(ret_ipa["double_blocks"])
+        print(next(ret_ipa["double_blocks"].parameters()).shape)
         print("\n"*3)
         pbar.update(1)
         return (ret_ipa,)
@@ -480,7 +480,7 @@ class ApplyFluxIPAdapter:
         
         clip = ip_adapter_flux['clip_vision']
         pixel_values = clip_preprocess(image.to(clip.load_device)).float()
-        out = clip.model(pixel_values=pixel_values, intermediate_output=-1)
+        out = clip.model(pixel_values=pixel_values)
         #print(out[0].shape, out[1].shape, out[2].shape)
         
         embeds = out[2].to(dtype=torch.bfloat16)
