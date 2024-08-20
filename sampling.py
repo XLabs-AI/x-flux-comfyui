@@ -40,9 +40,14 @@ def model_forward(
         controlnet_depth = len(block_controlnet_hidden_states)
     for index_block, block in enumerate(model.double_blocks):
         if isinstance(block.processor, DoubleStreamMixerProcessor):
-            if not neg_mode is None:
+            if neg_mode:
                 for ip in block.processor.ip_adapters:
                     ip.ip_hidden_states = ip.neg_ip_hidden_states
+            else:
+                for ip in block.processor.ip_adapters:
+                    ip.ip_hidden_states = ip.in_hidden_states_pos
+        img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
+
         img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
         # controlnet residual
         
@@ -299,7 +304,7 @@ def denoise_controlnet(
                 y=neg_vec,
                 timesteps=t_vec,
                 guidance=guidance_vec,
-                block_controlnet_hidden_states=[i * controlnet_gs for i in neg_block_res_samples]
+                block_controlnet_hidden_states=[i * controlnet_gs for i in neg_block_res_samples],
                 neg_mode = True,
 
             )     

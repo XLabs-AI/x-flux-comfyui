@@ -227,6 +227,7 @@ class IPProcessor(nn.Module):
         self.ip_hidden_states = ip_hidden_states
         self.ip_scale = ip_scale
         self.neg_hidden_states = None
+        self.in_hidden_states_pos = None
         # Ensure context_dim matches the dimension of ip_hidden_states
         self.context_dim = context_dim
         self.hidden_dim = hidden_dim

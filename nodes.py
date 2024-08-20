@@ -510,6 +510,7 @@ class ApplyFluxIPAdapter:
             ipad.load_state_dict(block.state_dict())
             ipad.to(dtype=torch.bfloat16)
             ipad.neg_hidden_states = ip_neg_pr
+            ipad.in_hidden_states_pos = ip_projes
             npp = DoubleStreamMixerProcessor()
             npp.add_ipadapter(ipad)
             ipad_blocks.append(npp)
