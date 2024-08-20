@@ -42,7 +42,7 @@ def model_forward(
         if isinstance(block.processor, DoubleStreamMixerProcessor):
             if neg_mode:
                 for ip in block.processor.ip_adapters:
-                    ip.ip_hidden_states = ip.neg_ip_hidden_states
+                    ip.ip_hidden_states = ip.neg_hidden_states
             else:
                 for ip in block.processor.ip_adapters:
                     ip.ip_hidden_states = ip.in_hidden_states_pos
