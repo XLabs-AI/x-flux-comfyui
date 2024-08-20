@@ -20,7 +20,7 @@ def model_forward(
     y: Tensor,
     block_controlnet_hidden_states=None,
     guidance: Tensor | None = None,
-    neg_mode: bool | None = None,
+    neg_mode: bool | None = False,
 ) -> Tensor:
     if img.ndim != 3 or txt.ndim != 3:
         raise ValueError("Input img and txt tensors must have 3 dimensions.")
@@ -42,11 +42,10 @@ def model_forward(
         if isinstance(block.processor, DoubleStreamMixerProcessor):
             if neg_mode:
                 for ip in block.processor.ip_adapters:
-                    ip.ip_hidden_states = ip.neg_hidden_states
+                    ip.ip_hidden_states = ip.in_hidden_states_neg
             else:
                 for ip in block.processor.ip_adapters:
                     ip.ip_hidden_states = ip.in_hidden_states_pos
-        img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
 
         img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
         # controlnet residual
