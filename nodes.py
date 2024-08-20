@@ -433,11 +433,11 @@ class LoadFluxIPAdapter:
 
         ret_ipa["double_blocks"] = torch.nn.ModuleList([IPProcessor(4096, 3072) for i in range(19)])
         ret_ipa["double_blocks"].load_state_dict(blocks)
-        print("\n"*3)
-        print(blocks.keys())
-        print("\n"*3)
-        print(next(ret_ipa["double_blocks"].parameters()).shape)
-        print("\n"*3)
+        #print("\n"*3)
+        #print(blocks.keys())
+        #print("\n"*3)
+        #print(next(ret_ipa["double_blocks"].parameters()))
+        #print("\n"*3)
         pbar.update(1)
         return (ret_ipa,)
 
@@ -479,8 +479,12 @@ class ApplyFluxIPAdapter:
         tyanochky = bi.model
         
         clip = ip_adapter_flux['clip_vision']
+        
         pixel_values = clip_preprocess(image.to(clip.load_device)).float()
-        out = clip.model(pixel_values=pixel_values)
+        out = clip.model(pixel_values=pixel_values, intermediate_output=-2)
+        neg_out = clip.model(pixel_values=torch.zeros_like(pixel_values), intermediate_output=-2)
+        
+        neg_out = neg_out[2].to(dtype=torch.bfloat16)
         #print(out[0].shape, out[1].shape, out[2].shape)
         
         embeds = out[2].to(dtype=torch.bfloat16)
@@ -497,12 +501,15 @@ class ApplyFluxIPAdapter:
         ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
         ip_adapter_flux['ip_adapter_proj_model'].to(dtype=torch.bfloat16)
         ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
-        
+        ip_neg_pr = ip_adapter_flux['ip_adapter_proj_model'](neg_out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
+
+
         ipad_blocks = []
         for block in ip_adapter_flux['double_blocks']:
             ipad = IPProcessor(block.context_dim, block.hidden_dim, ip_projes, strength_model)
             ipad.load_state_dict(block.state_dict())
             ipad.to(dtype=torch.bfloat16)
+            ipad.neg_hidden_states = ip_neg_pr
             npp = DoubleStreamMixerProcessor()
             npp.add_ipadapter(ipad)
             ipad_blocks.append(npp)

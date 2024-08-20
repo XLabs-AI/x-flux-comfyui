@@ -7,7 +7,7 @@ from torch import Tensor
 import numpy as np
 
 #from .modules.conditioner import HFEmbedder
-from .layers import timestep_embedding
+from .layers import DoubleStreamMixerProcessor, timestep_embedding
 from tqdm.auto import tqdm
 
 def model_forward(
@@ -20,6 +20,7 @@ def model_forward(
     y: Tensor,
     block_controlnet_hidden_states=None,
     guidance: Tensor | None = None,
+    neg_mode: bool | None = None,
 ) -> Tensor:
     if img.ndim != 3 or txt.ndim != 3:
         raise ValueError("Input img and txt tensors must have 3 dimensions.")
@@ -38,8 +39,13 @@ def model_forward(
     if block_controlnet_hidden_states is not None:
         controlnet_depth = len(block_controlnet_hidden_states)
     for index_block, block in enumerate(model.double_blocks):
+        if isinstance(block.processor, DoubleStreamMixerProcessor):
+            if not neg_mode is None:
+                for ip in block.processor.ip_adapters:
+                    ip.ip_hidden_states = ip.neg_ip_hidden_states
         img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
         # controlnet residual
+        
         if block_controlnet_hidden_states is not None:
             img = img + block_controlnet_hidden_states[index_block % 2]
 
@@ -197,6 +203,7 @@ def denoise(
                 y=neg_vec,
                 timesteps=t_vec,
                 guidance=guidance_vec,
+                neg_mode = True,
             )     
             pred = neg_pred + true_gs * (pred - neg_pred)
         img = img + (t_prev - t_curr) * pred
@@ -293,6 +300,8 @@ def denoise_controlnet(
                 timesteps=t_vec,
                 guidance=guidance_vec,
                 block_controlnet_hidden_states=[i * controlnet_gs for i in neg_block_res_samples]
+                neg_mode = True,
+
             )     
             pred = neg_pred + true_gs * (pred - neg_pred)
    
