@@ -39,7 +39,7 @@ def model_forward(
     if block_controlnet_hidden_states is not None:
         controlnet_depth = len(block_controlnet_hidden_states)
     for index_block, block in enumerate(model.double_blocks):
-        if isinstance(block.processor, DoubleStreamMixerProcessor):
+        if hasattr(block, 'processor') and isinstance(block.processor, DoubleStreamMixerProcessor): # Solve Error occurred when executing XlabsSampler: 'DoubleStreamBlock' object has no attribute 'processor'
             if neg_mode:
                 for ip in block.processor.ip_adapters:
                     ip.ip_hidden_states = ip.in_hidden_states_neg
