@@ -33,16 +33,6 @@ from .xflux.src.flux.model import Flux as ModFlux
 
 from comfy.utils import get_attr, set_attr
 
-# Define device selection function
-def get_device():
-    if torch.cuda.is_available():
-        return torch.device('cuda')
-    elif torch.backends.mps.is_available():
-        return torch.device('mps')
-    else:
-        return torch.device('cpu')
-
-device = get_device()
 
 dir_xlabs = os.path.join(folder_paths.models_dir, "xlabs")
 os.makedirs(dir_xlabs, exist_ok=True)
@@ -109,8 +99,7 @@ class LoadFluxLora:
         debug=False
      
         
-        #device=mm.get_torch_device()
-
+        device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
         
         is_patched = is_model_pathched(model.model)
@@ -225,7 +214,7 @@ class LoadFluxControlNet:
     CATEGORY = "XLabsNodes"
 
     def loadmodel(self, model_name, controlnet_path):
-        #device=mm.get_torch_device()
+        device=mm.get_torch_device()
 
         controlnet = load_controlnet(model_name, device)
         checkpoint = load_checkpoint_controlnet(os.path.join(dir_xlabs_controlnets, controlnet_path))
@@ -252,7 +241,7 @@ class ApplyFluxControlNet:
     CATEGORY = "XLabsNodes"
 
     def prepare(self, controlnet, image, strength):
-        #device=mm.get_torch_device()
+        device=mm.get_torch_device()
         controlnet_image = torch.from_numpy((np.array(image) * 2) - 1)
         controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(torch.bfloat16).to(device)
         
@@ -310,7 +299,7 @@ class XlabsSampler:
         except:
             guidance=1.0
         
-        #device=mm.get_torch_device()
+        device=mm.get_torch_device()
         if torch.backends.mps.is_available():
             dtype_model = torch.bfloat16  # MPS supports float32
         elif torch.cuda.is_available() and torch.cuda.is_bf16_supported(): 
