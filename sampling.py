@@ -39,13 +39,14 @@ def model_forward(
     if block_controlnet_hidden_states is not None:
         controlnet_depth = len(block_controlnet_hidden_states)
     for index_block, block in enumerate(model.double_blocks):
-        if isinstance(block.processor, DoubleStreamMixerProcessor):
-            if neg_mode:
-                for ip in block.processor.ip_adapters:
-                    ip.ip_hidden_states = ip.in_hidden_states_neg
-            else:
-                for ip in block.processor.ip_adapters:
-                    ip.ip_hidden_states = ip.in_hidden_states_pos
+        if hasattr(block, "processor"):
+            if isinstance(block.processor, DoubleStreamMixerProcessor):
+                if neg_mode:
+                    for ip in block.processor.ip_adapters:
+                        ip.ip_hidden_states = ip.in_hidden_states_neg
+                else:
+                    for ip in block.processor.ip_adapters:
+                        ip.ip_hidden_states = ip.in_hidden_states_pos
 
         img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
         # controlnet residual
