@@ -3,75 +3,6 @@
   "last_link_id": 76,
   "nodes": [
     {
-      "id": 4,
-      "type": "DualCLIPLoader",
-      "pos": [
-        -239,
-        198
-      ],
-      "size": {
-        "0": 315,
-        "1": 106
-      },
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "CLIP",
-          "type": "CLIP",
-          "links": [
-            2,
-            27
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "DualCLIPLoader"
-      },
-      "widgets_values": [
-        "t5/google_t5-v1_1-xxl_encoderonly-fp16.safetensors",
-        "flux/clip_l.safetensors",
-        "flux"
-      ]
-    },
-    {
-      "id": 32,
-      "type": "LoadFluxIPAdapter",
-      "pos": [
-        313,
-        147
-      ],
-      "size": {
-        "0": 315,
-        "1": 106
-      },
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "ipadapterFlux",
-          "type": "IP_ADAPTER_FLUX",
-          "links": [
-            65
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadFluxIPAdapter"
-      },
-      "widgets_values": [
-        "75000.safetensors",
-        "flux/clip_vision_l.safetensors",
-        "CPU"
-      ]
-    },
-    {
       "id": 6,
       "type": "EmptyLatentImage",
       "pos": [
@@ -83,7 +14,7 @@
         "1": 106
       },
       "flags": {},
-      "order": 2,
+      "order": 0,
       "mode": 0,
       "outputs": [
         {
@@ -106,78 +37,6 @@
       ]
     },
     {
-      "id": 13,
-      "type": "LoadFluxControlNet",
-      "pos": [
-        -157,
-        -312
-      ],
-      "size": {
-        "0": 315,
-        "1": 82
-      },
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "ControlNet",
-          "type": "FluxControlNet",
-          "links": [],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadFluxControlNet"
-      },
-      "widgets_values": [
-        "flux-dev",
-        "flux-depth-controlnet.safetensors"
-      ]
-    },
-    {
-      "id": 16,
-      "type": "LoadImage",
-      "pos": [
-        -654,
-        -53
-      ],
-      "size": {
-        "0": 315,
-        "1": 314
-      },
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            55,
-            67,
-            72
-          ],
-          "shape": 3,
-          "slot_index": 0
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null,
-          "shape": 3
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadImage"
-      },
-      "widgets_values": [
-        "statue.jpg",
-        "image"
-      ]
-    },
-    {
       "id": 19,
       "type": "CLIPTextEncodeFlux",
       "pos": [
@@ -189,7 +48,7 @@
         "1": 200
       },
       "flags": {},
-      "order": 9,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
@@ -220,90 +79,6 @@
       ]
     },
     {
-      "id": 29,
-      "type": "ImageCrop",
-      "pos": [
-        -54,
-        8
-      ],
-      "size": {
-        "0": 315,
-        "1": 130
-      },
-      "flags": {},
-      "order": 10,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 55,
-          "slot_index": 0
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ImageCrop"
-      },
-      "widgets_values": [
-        1024,
-        512,
-        4,
-        4
-      ]
-    },
-    {
-      "id": 33,
-      "type": "ImageScale",
-      "pos": [
-        -38,
-        -184
-      ],
-      "size": {
-        "0": 315,
-        "1": 130
-      },
-      "flags": {},
-      "order": 11,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 72,
-          "slot_index": 0
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            73
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ImageScale"
-      },
-      "widgets_values": [
-        "nearest-exact",
-        1024,
-        1024,
-        "disabled"
-      ]
-    },
-    {
       "id": 8,
       "type": "VAELoader",
       "pos": [
@@ -315,14 +90,13 @@
         "1": 58
       },
       "flags": {},
-      "order": 5,
+      "order": 1,
       "mode": 0,
       "outputs": [
         {
           "name": "VAE",
           "type": "VAE",
           "links": [
-            54,
             59
           ],
           "shape": 3,
@@ -348,7 +122,7 @@
         "1": 82
       },
       "flags": {},
-      "order": 6,
+      "order": 2,
       "mode": 0,
       "inputs": [
         {
@@ -374,48 +148,6 @@
       ]
     },
     {
-      "id": 7,
-      "type": "VAEDecode",
-      "pos": [
-        1418,
-        44
-      ],
-      "size": {
-        "0": 210,
-        "1": 46
-      },
-      "flags": {},
-      "order": 15,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "samples",
-          "type": "LATENT",
-          "link": 6,
-          "slot_index": 0
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 59
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            76
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "VAEDecode"
-      }
-    },
-    {
       "id": 10,
       "type": "UNETLoader",
       "pos": [
@@ -427,7 +159,7 @@
         "1": 82
       },
       "flags": {},
-      "order": 7,
+      "order": 3,
       "mode": 0,
       "outputs": [
         {
@@ -449,57 +181,6 @@
       ]
     },
     {
-      "id": 27,
-      "type": "ApplyFluxIPAdapter",
-      "pos": [
-        690,
-        176
-      ],
-      "size": {
-        "0": 210,
-        "1": 98
-      },
-      "flags": {},
-      "order": 13,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 61,
-          "slot_index": 0
-        },
-        {
-          "name": "ip_adapter_flux",
-          "type": "IP_ADAPTER_FLUX",
-          "link": 65
-        },
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 73,
-          "slot_index": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            62
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ApplyFluxIPAdapter"
-      },
-      "widgets_values": [
-        0.92
-      ]
-    },
-    {
       "id": 3,
       "type": "XlabsSampler",
       "pos": [
@@ -511,7 +192,7 @@
         "1": 258
       },
       "flags": {},
-      "order": 14,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
@@ -564,84 +245,52 @@
       ]
     },
     {
-      "id": 28,
-      "type": "VAEEncode",
+      "id": 32,
+      "type": "LoadFluxIPAdapter",
       "pos": [
-        1419,
-        452
+        313,
+        147
       ],
       "size": {
-        "0": 210,
-        "1": 46
+        "0": 315,
+        "1": 106
       },
       "flags": {},
-      "order": 12,
+      "order": 4,
       "mode": 0,
-      "inputs": [
-        {
-          "name": "pixels",
-          "type": "IMAGE",
-          "link": 67
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 54,
-          "slot_index": 1
-        }
-      ],
       "outputs": [
         {
-          "name": "LATENT",
-          "type": "LATENT",
-          "links": [],
+          "name": "ipadapterFlux",
+          "type": "IP_ADAPTER_FLUX",
+          "links": [
+            65
+          ],
           "shape": 3,
           "slot_index": 0
         }
       ],
       "properties": {
-        "Node name for S&R": "VAEEncode"
-      }
-    },
-    {
-      "id": 36,
-      "type": "PreviewImage",
-      "pos": [
-        1674,
-        -229
-      ],
-      "size": [
-        865.8053830990111,
-        863.5560702909771
-      ],
-      "flags": {},
-      "order": 16,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 76,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "PreviewImage"
-      }
+        "Node name for S&R": "LoadFluxIPAdapter"
+      },
+      "widgets_values": [
+        "flux-ip-adapter.safetensors",
+        "model.safetensors",
+        "CPU"
+      ]
     },
     {
       "id": 5,
       "type": "CLIPTextEncodeFlux",
       "pos": [
-        535,
-        -107
+        428,
+        -169
       ],
       "size": {
         "0": 400,
         "1": 200
       },
       "flags": {},
-      "order": 8,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
@@ -670,6 +319,284 @@
         "holding sign with glowing green text \"X-LABS IP Adapter\"",
         4
       ]
+    },
+    {
+      "id": 27,
+      "type": "ApplyFluxIPAdapter",
+      "pos": [
+        642,
+        248
+      ],
+      "size": {
+        "0": 210,
+        "1": 98
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 61,
+          "slot_index": 0
+        },
+        {
+          "name": "ip_adapter_flux",
+          "type": "IP_ADAPTER_FLUX",
+          "link": 65
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 73,
+          "slot_index": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            62
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ApplyFluxIPAdapter"
+      },
+      "widgets_values": [
+        0.92
+      ]
+    },
+    {
+      "id": 29,
+      "type": "ImageCrop",
+      "pos": [
+        -54,
+        53
+      ],
+      "size": {
+        "0": 315,
+        "1": 130
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 55,
+          "slot_index": 0
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageCrop"
+      },
+      "widgets_values": [
+        1024,
+        512,
+        4,
+        4
+      ]
+    },
+    {
+      "id": 33,
+      "type": "ImageScale",
+      "pos": [
+        -80,
+        -148
+      ],
+      "size": {
+        "0": 315,
+        "1": 130
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 72,
+          "slot_index": 0
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            73
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageScale"
+      },
+      "widgets_values": [
+        "nearest-exact",
+        1024,
+        1024,
+        "disabled"
+      ]
+    },
+    {
+      "id": 16,
+      "type": "LoadImage",
+      "pos": [
+        -446,
+        -191
+      ],
+      "size": {
+        "0": 315,
+        "1": 314
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            55,
+            72
+          ],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "statue.jpg",
+        "image"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "DualCLIPLoader",
+      "pos": [
+        -275,
+        322
+      ],
+      "size": {
+        "0": 315,
+        "1": 106
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            2,
+            27
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DualCLIPLoader"
+      },
+      "widgets_values": [
+        "t5xxl_fp16.safetensors",
+        "clip_l.safetensors",
+        "flux"
+      ]
+    },
+    {
+      "id": 36,
+      "type": "PreviewImage",
+      "pos": [
+        1663,
+        -228
+      ],
+      "size": {
+        "0": 865.8053588867188,
+        "1": 863.5560913085938
+      },
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 76,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
+      "id": 7,
+      "type": "VAEDecode",
+      "pos": [
+        1346,
+        -128
+      ],
+      "size": {
+        "0": 210,
+        "1": 46
+      },
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 6,
+          "slot_index": 0
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 59
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            76
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      }
     }
   ],
   "links": [
@@ -714,14 +641,6 @@
       "CLIP"
     ],
     [
-      54,
-      8,
-      0,
-      28,
-      1,
-      "VAE"
-    ],
-    [
       55,
       16,
       0,
@@ -762,14 +681,6 @@
       "IP_ADAPTER_FLUX"
     ],
     [
-      67,
-      16,
-      0,
-      28,
-      0,
-      "IMAGE"
-    ],
-    [
       72,
       16,
       0,
@@ -806,10 +717,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.544500000000001,
+      "scale": 0.6727499949325612,
       "offset": [
-        697.7565649453194,
-        1005.9358502248118
+        454.9047202912717,
+        602.847204664566
       ]
     }
   },
