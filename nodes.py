@@ -130,7 +130,7 @@ class LoadFluxLora:
         if not is_patched:
             print("We are patching diffusion model, be patient please")
             patches=FluxUpdateModules(tyanochky, pbar)
-            set_attn_processor(model.model.diffusion_model, DoubleStreamBlockProcessor())
+            #set_attn_processor(model.model.diffusion_model, DoubleStreamBlockProcessor())
         else:
             print("Model already updated")
         pbar.update(mul)
@@ -142,7 +142,8 @@ class LoadFluxLora:
                 checkpoint = comfy_to_xlabs_lora(checkpoint)
             #cached_proccesors =  attn_processors(tyanochky.diffusion_model).items()
             for name, _ in attn_processors(tyanochky.diffusion_model).items():
-                lora_attn_procs[name] = DoubleStreamBlockLoraProcessor(dim=3072, rank=lora_rank, lora_weight=strength_model)
+                lora_attn_procs[name] = DoubleStreamBlockLoraProcessor(
+                    dim=3072, rank=lora_rank, lora_weight=strength_model)
                 lora_state_dict = {}
                 for k in checkpoint.keys():
                     if name in k:
@@ -152,7 +153,7 @@ class LoadFluxLora:
                 tmp=DoubleStreamMixerProcessor()
                 tmp.add_lora(lora_attn_procs[name])
                 lora_attn_procs[name]=tmp
-                pbar.update(mul)
+            pbar.update(mul)
         #set_attn_processor(tyanochky.diffusion_model, lora_attn_procs)
         if debug:
             try:
