@@ -39,6 +39,7 @@ def model_forward(
     if block_controlnet_hidden_states is not None:
         controlnet_depth = len(block_controlnet_hidden_states)
     for index_block, block in enumerate(model.double_blocks):
+
         if hasattr(block, "processor"):
             if isinstance(block.processor, DoubleStreamMixerProcessor):
                 if neg_mode:
