@@ -299,13 +299,19 @@ class XlabsSampler:
             guidance=conditioning[0][1]['guidance']
         except:
             guidance=1.0
-        
-        device=mm.get_torch_device()
-        if torch.cuda.is_bf16_supported(): 
-            dtype_model = torch.bfloat16#
+
+        if torch.cuda.is_available():
+          device=mm.get_torch_device()
+          if torch.cuda.is_bf16_supported(): 
+              dtype_model = torch.bfloat16#
+          else:
+              dtype_model = torch.float16#
+          #dtype_model = torch.bfloat16#model.model.diffusion_model.img_in.weight.dtype
         else:
-            dtype_model = torch.float16#
-        #dtype_model = torch.bfloat16#model.model.diffusion_model.img_in.weight.dtype
+          # For Mac with MPS(Apple silicon)
+          device = torch.device("mps")
+          dtype = torch.bfloat16
+          
         offload_device=mm.unet_offload_device()
         
         torch.manual_seed(noise_seed)
