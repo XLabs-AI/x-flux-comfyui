@@ -4,8 +4,6 @@
 
 ### Add
 
-- Latent preview
-- IPAdapter new clip-vit
 - IPAdapter controlling features
 - IPAdapter compatablity with VIT
 - Offloading support
@@ -14,8 +12,14 @@
 ## [Unreleased]
 
 ### Added
-- 
 
+
+## [0.3.2]
+
+### Added
+- New clip-vit
+- Latent preview
+- 
 ## [0.3.45]
 
 ### Added
