@@ -489,6 +489,11 @@ class ApplyFluxIPAdapter:
         clip = ip_adapter_flux['clip_vision']
         
         if isinstance(clip, FluxClipViT):
+            #torch.Size([1, 526, 526, 3])
+            image = torch.permute(image, (0, ))
+            #print(image.shape)
+            #print(image)
+            image = torch.clip(image*255, 0.0, 255)
             out = clip(image).to(dtype=torch.bfloat16)
             neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
         else:
