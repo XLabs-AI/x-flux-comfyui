@@ -1,4 +1,5 @@
 import os
+
 import comfy.model_management as mm
 import comfy.model_patcher as mp
 from comfy.utils import ProgressBar
@@ -32,6 +33,7 @@ from .xflux.src.flux.model import Flux as ModFlux
 
 
 from comfy.utils import get_attr, set_attr
+from .clip import FluxClipViT
 
 
 dir_xlabs = os.path.join(folder_paths.models_dir, "xlabs")
@@ -416,7 +418,12 @@ class LoadFluxIPAdapter:
         ckpt = load_safetensors(path)
         pbar.update(1)
         path_clip = folder_paths.get_full_path("clip_vision", clip_vision)
-        clip = load_clip_vision(path_clip)
+        
+        try: 
+            clip = FluxClipViT(path_clip)
+        except:
+            clip = load_clip_vision(path_clip).model
+        
         ret_ipa["clip_vision"] = clip
         prefix = "double_blocks."
         blocks = {}
@@ -481,14 +488,20 @@ class ApplyFluxIPAdapter:
         
         clip = ip_adapter_flux['clip_vision']
         
-        pixel_values = clip_preprocess(image.to(clip.load_device)).float()
-        out = clip.model(pixel_values=pixel_values)
-        neg_out = clip.model(pixel_values=torch.zeros_like(pixel_values))
-        
-        neg_out = neg_out[2].to(dtype=torch.bfloat16)
-        #print(out[0].shape, out[1].shape, out[2].shape)
-        
-        embeds = out[2].to(dtype=torch.bfloat16)
+        if isinstance(clip, FluxClipViT):
+            #torch.Size([1, 526, 526, 3])
+            #image = torch.permute(image, (0, ))
+            #print(image.shape)
+            #print(image)
+            image = torch.clip(image*255, 0.0, 255)
+            out = clip(image).to(dtype=torch.bfloat16)
+            neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
+        else:
+            pixel_values = clip_preprocess(image.to(clip.load_device)).float()
+            out = clip(pixel_values=pixel_values)
+            neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
+            neg_out = neg_out[2].to(dtype=torch.bfloat16)
+            out = out[2].to(dtype=torch.bfloat16)
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
@@ -501,7 +514,7 @@ class ApplyFluxIPAdapter:
         #TYANOCHKYBY=16
         ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
         ip_adapter_flux['ip_adapter_proj_model'].to(dtype=torch.bfloat16)
-        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
+        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
         ip_neg_pr = ip_adapter_flux['ip_adapter_proj_model'](neg_out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
 
 
