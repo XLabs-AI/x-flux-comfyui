@@ -10,13 +10,14 @@
 4. Run ComfyUI after installing and enjoy!
 
 After the first launch, the `ComfyUI/models/xlabs/loras` and `ComfyUI/models/xlabs/controlnets` folders will be created automatically. <br/>
-So, to use lora or controlnet just put models in these folders. <br/>
+So, to use LoRA or ControlNet just put models in these folders. <br/>
 After that, you may need to click "Refresh" in the user-friendly interface to use the models. <br/>
-For controlnet you need install https://github.com/Fannovel16/comfyui_controlnet_aux <br/>
+For ControlNet you need install https://github.com/Fannovel16/comfyui_controlnet_aux
+
 ## Low memory mode
 You can launch Flux utilizing 12GB VRAM memory usage.
 1. Follow installation as described in repo https://github.com/city96/ComfyUI-GGUF
-2. Use flux1-dev-Q4_0.gguf from repo https://github.com/city96/ComfyUI-GGUF <br/>
+2. Use flux1-dev-Q4_0.gguf from repo https://github.com/city96/ComfyUI-GGUF
 3. Launch ComfyUI with parameters:
 ```bash
 python3 main.py --lowvram --preview-method auto --use-split-cross-attention
@@ -36,6 +37,7 @@ You can download them on HuggingFace:
 - [flux-lora-collections](https://huggingface.co/XLabs-AI/flux-lora-collection)
 - [flux-furry-lora](https://huggingface.co/XLabs-AI/flux-furry-lora)
 - [flux-ip-adapter](https://huggingface.co/XLabs-AI/flux-ip-adapter/)
+
 ## IP Adapter
 
 ### Instruction

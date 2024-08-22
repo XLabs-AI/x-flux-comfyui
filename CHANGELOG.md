@@ -5,13 +5,12 @@
 ### Add
 
 - IPAdapter controlling features
-- IPAdapter compatablity with VIT
+- IPAdapter compatibility with VIT
 - Offloading support
 
 ## [Unreleased]
 
 ### Added
-
 
 ## [0.4.2]
 
@@ -24,8 +23,7 @@
 
 ### Added
 
-- IP adapter support
-
+- IP Adapter support
 
 ## [0.2.38]
 
@@ -35,11 +33,11 @@
 
 ### Changed
 
-- Updated readme.md, added
+- Updated README.md, added
 
 ## [0.1.0]
 
 ### Added
 
-- Lora and controlnets support
+- LoRA and ControlNets support
 - xlabs Sampler
