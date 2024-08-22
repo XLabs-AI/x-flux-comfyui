@@ -1,4 +1,5 @@
 import os
+from clip import FluxClipViT
 import comfy.model_management as mm
 import comfy.model_patcher as mp
 from comfy.utils import ProgressBar
@@ -416,7 +417,12 @@ class LoadFluxIPAdapter:
         ckpt = load_safetensors(path)
         pbar.update(1)
         path_clip = folder_paths.get_full_path("clip_vision", clip_vision)
-        clip = load_clip_vision(path_clip)
+        
+        try: 
+            clip = FluxClipViT(path_clip)
+        except:
+            clip = load_clip_vision(path_clip).model
+        
         ret_ipa["clip_vision"] = clip
         prefix = "double_blocks."
         blocks = {}
@@ -480,10 +486,14 @@ class ApplyFluxIPAdapter:
         tyanochky = bi.model
         
         clip = ip_adapter_flux['clip_vision']
-        
         pixel_values = clip_preprocess(image.to(clip.load_device)).float()
-        out = clip.model(pixel_values=pixel_values)
-        neg_out = clip.model(pixel_values=torch.zeros_like(pixel_values))
+        if isinstance(clip, FluxClipViT):
+            out = clip(image)
+            neg_out = clip(torch.zeros_like(pixel_values))
+        else:
+            
+            out = clip(pixel_values=pixel_values)
+            neg_out = clip(pixel_values=torch.zeros_like(pixel_values))
         
         neg_out = neg_out[2].to(dtype=torch.bfloat16)
         #print(out[0].shape, out[1].shape, out[2].shape)
