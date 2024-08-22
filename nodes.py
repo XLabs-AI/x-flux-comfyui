@@ -268,7 +268,7 @@ class XlabsSampler:
                     "timestep_to_start_cfg": ("INT",  {"default": 20, "min": 0, "max": 100}),
                     "true_gs": ("FLOAT",  {"default": 3, "min": 0, "max": 100}),
                     "image_to_image_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                    "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                    "denoise_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                 },
             "optional": {
                     "latent_image": ("LATENT", {"default": None}),
@@ -282,7 +282,7 @@ class XlabsSampler:
 
     def sampling(self, model, conditioning, neg_conditioning,
                  noise_seed, steps, timestep_to_start_cfg, true_gs,
-                 image_to_image_strength, denoise,
+                 image_to_image_strength, denoise_strength,
                  latent_image=None, controlnet_condition=None
                  ):
         additional_steps = 11 if controlnet_condition is None else 12
@@ -339,9 +339,9 @@ class XlabsSampler:
         inp_cond = prepare(conditioning[0][0], conditioning[0][1]['pooled_output'], img=x)
         neg_inp_cond = prepare(neg_conditioning[0][0], neg_conditioning[0][1]['pooled_output'], img=x)
 
-        if denoise<=0.99:
+        if denoise_strength<=0.99:
             try:
-                timesteps=timesteps[:int(len(timesteps)*denoise)]
+                timesteps=timesteps[:int(len(timesteps)*denoise_strength)]
             except:
                 pass
         # for sampler preview
