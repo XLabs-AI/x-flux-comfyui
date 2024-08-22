@@ -487,12 +487,12 @@ class ApplyFluxIPAdapter:
         tyanochky = bi.model
         
         clip = ip_adapter_flux['clip_vision']
-        pixel_values = clip_preprocess(image.to(clip.load_device)).float()
+        
         if isinstance(clip, FluxClipViT):
             out = clip(image)
-            neg_out = clip(torch.zeros_like(pixel_values))
+            neg_out = clip(torch.zeros_like(image))
         else:
-            
+            pixel_values = clip_preprocess(image.to(clip.load_device)).float()
             out = clip(pixel_values=pixel_values)
             neg_out = clip(pixel_values=torch.zeros_like(pixel_values))
         

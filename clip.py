@@ -28,11 +28,11 @@ class FluxClipViT:
         self.image_processor = CLIPImageProcessor()
         self.load_device = next(self.model.parameters()).device
 
-    def __call__(self, img):
-        #img = self.image_processor(
-        #    images=image, return_tensors="pt"
-        #    )
-        #img = img.pixel_values
+    def __call__(self, image):
+        img = self.image_processor(
+            images=image, return_tensors="pt"
+            )
+        img = img.pixel_values
         return self.model(img).image_embeds
 
 
