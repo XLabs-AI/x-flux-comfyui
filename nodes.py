@@ -313,8 +313,8 @@ class XlabsSampler:
         torch.manual_seed(noise_seed)
         
         bc, c, h, w = latent_image['samples'].shape
-        height=h*8
-        width=w*8
+        height=(h//2)*16
+        width=(w//2)*16
 
         x = get_noise(
             bc, height, width, device=device,
