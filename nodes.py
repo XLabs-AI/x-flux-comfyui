@@ -490,11 +490,13 @@ class ApplyFluxIPAdapter:
             #image = torch.permute(image, (0, ))
             #print(image.shape)
             #print(image)
+            clip_device = next(clip.parameters()).device
             image = torch.clip(image*255, 0.0, 255)
             out = clip(image).to(dtype=torch.bfloat16)
             neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
         else:
-            pixel_values = clip_preprocess(image.to(clip.load_device)).float()
+            clip_device = next(clip.parameters()).device
+            pixel_values = clip_preprocess(image.to(clip_device)).float()
             out = clip(pixel_values=pixel_values)
             neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
             neg_out = neg_out[2].to(dtype=torch.bfloat16)
