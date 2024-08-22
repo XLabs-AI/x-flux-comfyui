@@ -20,4 +20,4 @@ if os.name == 'nt':
 else:
     os.system(f'pip install -r "{cur_dir}/requirements.txt"')
 
-print("Succesfully installed")
+print("Successfully installed")
