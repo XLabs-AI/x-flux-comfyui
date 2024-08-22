@@ -495,6 +495,7 @@ class ApplyFluxIPAdapter:
             out = clip(image).to(dtype=torch.bfloat16)
             neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
         else:
+            print("Using old vit clip")
             clip_device = next(clip.parameters()).device
             pixel_values = clip_preprocess(image.to(clip_device)).float()
             out = clip(pixel_values=pixel_values)
