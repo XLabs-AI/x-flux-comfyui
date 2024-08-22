@@ -489,17 +489,14 @@ class ApplyFluxIPAdapter:
         clip = ip_adapter_flux['clip_vision']
         
         if isinstance(clip, FluxClipViT):
-            out = clip(image)
-            neg_out = clip(torch.zeros_like(image))
+            out = clip(image).to(dtype=torch.bfloat16)
+            neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
         else:
             pixel_values = clip_preprocess(image.to(clip.load_device)).float()
             out = clip(pixel_values=pixel_values)
-            neg_out = clip(pixel_values=torch.zeros_like(pixel_values))
-        
-        neg_out = neg_out[2].to(dtype=torch.bfloat16)
-        #print(out[0].shape, out[1].shape, out[2].shape)
-        
-        embeds = out[2].to(dtype=torch.bfloat16)
+            neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
+            neg_out = neg_out[2].to(dtype=torch.bfloat16)
+            embeds = out[2].to(dtype=torch.bfloat16)
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
