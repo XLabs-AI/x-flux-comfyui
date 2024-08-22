@@ -4,7 +4,7 @@ import comfy.model_patcher as mp
 from comfy.utils import ProgressBar
 from comfy.clip_vision import load as load_clip_vision
 from comfy.clip_vision import clip_preprocess, Output
-
+import latent_preview
 import copy
 
 import folder_paths
@@ -18,11 +18,11 @@ from .xflux.src.flux.util import (configs, load_ae, load_clip,
                             load_controlnet)
 
 
-from .utils import (FluxUpdateModules, attn_processors, set_attn_processor, 
+from .utils import (FluxUpdateModules, attn_processors, set_attn_processor,
                 is_model_pathched, merge_loras, LATENT_PROCESSOR_COMFY,
                 comfy_to_xlabs_lora, check_is_comfy_lora)
-from .layers import (DoubleStreamBlockLoraProcessor, 
-                     DoubleStreamBlockProcessor, 
+from .layers import (DoubleStreamBlockLoraProcessor,
+                     DoubleStreamBlockProcessor,
                      DoubleStreamBlockLorasMixerProcessor,
                      DoubleStreamMixerProcessor,
                      IPProcessor,
@@ -97,32 +97,32 @@ class LoadFluxLora:
 
     def loadmodel(self, model, lora_name, strength_model):
         debug=False
-     
-        
+
+
         device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
-        
+
         is_patched = is_model_pathched(model.model)
-        
+
         print(f"Is model already patched? {is_patched}")
-        mul = 1 
+        mul = 1
         if is_patched:
             pbar = ProgressBar(5)
         else:
             mul = 3
             count = len(model.model.diffusion_model.double_blocks)
             pbar = ProgressBar(5*mul+count)
-            
+
         bi = model.clone()
         tyanochky = bi.model
-        
+
         if debug:
             print("\n", (print_if_not_empty(bi.object_patches_backup)), "\n___\n", (print_if_not_empty(bi.object_patches)), "\n")
             try:
                 print(get_attr(tyanochky, "diffusion_model.double_blocks.0.processor.lora_weight"))
             except:
                 pass
-        
+
         pbar.update(mul)
         bi.model.to(device)
         checkpoint, lora_rank = load_flux_lora(os.path.join(dir_xlabs_loras, lora_name))
@@ -135,8 +135,8 @@ class LoadFluxLora:
             print("Model already updated")
         pbar.update(mul)
         #TYANOCHKYBY=16
-        
-        lora_attn_procs = {}   
+
+        lora_attn_procs = {}
         if checkpoint is not None:
             if check_is_comfy_lora(checkpoint):
                 checkpoint = comfy_to_xlabs_lora(checkpoint)
@@ -158,7 +158,7 @@ class LoadFluxLora:
         if debug:
             try:
                 if isinstance(
-                        get_attr(tyanochky, "diffusion_model.double_blocks.0.processor"), 
+                        get_attr(tyanochky, "diffusion_model.double_blocks.0.processor"),
                         DoubleStreamMixerProcessor
                     ):
                     pedovki = get_attr(tyanochky, "diffusion_model.double_blocks.0.processor").lora_weight
@@ -167,7 +167,7 @@ class LoadFluxLora:
                         print(f"Loras applied: {altushki}")
             except:
                 pass
-        
+
         for name, _ in attn_processors(tyanochky.diffusion_model).items():
             attribute = f"diffusion_model.{name}"
             #old = copy.copy(get_attr(bi.model, attribute))
@@ -177,16 +177,16 @@ class LoadFluxLora:
                 old = None
             lora = merge_loras(old, lora_attn_procs[name])
             bi.add_object_patch(attribute, lora)
-            
-        
+
+
         if debug:
             print("\n", (print_if_not_empty(bi.object_patches_backup)), "\n_b_\n", (print_if_not_empty(bi.object_patches)), "\n")
             print("\n", (print_if_not_empty(model.object_patches_backup)), "\n_m__\n", (print_if_not_empty(model.object_patches)), "\n")
-            
+
             for _, b in bi.object_patches.items():
                 print(b.lora_weight)
                 break
-            
+
         #print(get_attr(tyanochky, "diffusion_model.double_blocks.0.processor"))
         pbar.update(mul)
         return (bi,)
@@ -227,7 +227,7 @@ class LoadFluxControlNet:
             "control_type": control_type,
         }
         return (ret_controlnet,)
-    
+
 class ApplyFluxControlNet:
     @classmethod
     def INPUT_TYPES(s):
@@ -245,7 +245,7 @@ class ApplyFluxControlNet:
         device=mm.get_torch_device()
         controlnet_image = torch.from_numpy((np.array(image) * 2) - 1)
         controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(torch.bfloat16).to(device)
-        
+
         ret_cont = {
             "img": controlnet_image,
             "controlnet_strength": strength,
@@ -277,42 +277,34 @@ class XlabsSampler:
     FUNCTION = "sampling"
     CATEGORY = "XLabsNodes"
 
-    def sampling(
-            self, model, conditioning, neg_conditioning, 
-            noise_seed, steps, timestep_to_start_cfg, true_gs, 
-            image_to_image_strength, latent_image=None, controlnet_condition=None):
-        additional_steps = 11
-        if controlnet_condition is None:
-            additional_steps = 11
-        else:
-            additional_steps=12
-        pbar = ProgressBar(steps+additional_steps)
-        pbar.update(1)
+    def sampling(self, model, conditioning, neg_conditioning,
+                 noise_seed, steps, timestep_to_start_cfg, true_gs,
+                 image_to_image_strength, latent_image=None, controlnet_condition=None
+                 ):
+        additional_steps = 11 if controlnet_condition is None else 12
         mm.load_model_gpu(model)
-
-        pbar.update(5)
         inmodel = model.model
         #print(conditioning[0][0].shape) #//t5
         #print(conditioning[0][1]['pooled_output'].shape) #//clip
         #print(latent_image['samples'].shape) #// torch.Size([1, 4, 64, 64]) // bc, 4, w//8, h//8
         try:
-            guidance=conditioning[0][1]['guidance']
+            guidance = conditioning[0][1]['guidance']
         except:
-            guidance=1.0
-        
+            guidance = 1.0
+
         device=mm.get_torch_device()
-        if torch.cuda.is_bf16_supported(): 
+        if torch.cuda.is_bf16_supported():
             dtype_model = torch.bfloat16#
         else:
             dtype_model = torch.float16#
         #dtype_model = torch.bfloat16#model.model.diffusion_model.img_in.weight.dtype
         offload_device=mm.unet_offload_device()
-        
+
         torch.manual_seed(noise_seed)
-        
+
         bc, c, h, w = latent_image['samples'].shape
-        height=h*8
-        width=w*8
+        height = h * 8
+        width = w * 8
 
         x = get_noise(
             bc, height, width, device=device,
@@ -324,7 +316,7 @@ class XlabsSampler:
             lat_processor2 = LATENT_PROCESSOR_COMFY()
             orig_x=lat_processor2.go_back(orig_x)
             orig_x=orig_x.to(device, dtype=dtype_model)
-        
+
         timesteps = get_schedule(
             steps,
             (width // 8) * (height // 8) // 4,
@@ -335,14 +327,16 @@ class XlabsSampler:
         except:
             pass
         x.to(device)
-        pbar.update(1)
         inmodel.diffusion_model.to(device)
         inp_cond = prepare(conditioning[0][0], conditioning[0][1]['pooled_output'], img=x)
         neg_inp_cond = prepare(neg_conditioning[0][0], neg_conditioning[0][1]['pooled_output'], img=x)
-        pbar.update(2)
+
+        # for sampler preview
+        x0_output = {}
+        callback = latent_preview.prepare_callback(model, len(timesteps) - 1, x0_output)
+
         if controlnet_condition is None:
             x = denoise(
-                pbar,
                 inmodel.diffusion_model, **inp_cond, timesteps=timesteps, guidance=guidance,
                 timestep_to_start_cfg=timestep_to_start_cfg,
                 neg_txt=neg_inp_cond['txt'],
@@ -351,10 +345,13 @@ class XlabsSampler:
                 true_gs=true_gs,
                 image2image_strength=image_to_image_strength,
                 orig_image=orig_x,
+                callback=callback,
+                width=width,
+                height=height,
             )
-        
+
         else:
-            
+
             controlnet = controlnet_condition['model']
             controlnet_image = controlnet_condition['img']
             controlnet_image = torch.nn.functional.interpolate(
@@ -364,9 +361,7 @@ class XlabsSampler:
             controlnet_image=controlnet_image.to(device, dtype=dtype_model)
             mm.load_models_gpu([model,])
             #mm.load_model_gpu(controlnet)
-            pbar.update(1)
             x = denoise_controlnet(
-                pbar,
                 inmodel.diffusion_model, **inp_cond, controlnet=controlnet,
                 timesteps=timesteps, guidance=guidance,
                 controlnet_cond=controlnet_image,
@@ -378,15 +373,17 @@ class XlabsSampler:
                 controlnet_gs=controlnet_strength,
                 image2image_strength=image_to_image_strength,
                 orig_image=orig_x,
+                callback=callback,
+                width=width,
+                height=height,
             )
             #controlnet.to(offload_device)
-        
-        x=unpack(x,height,width)
-        pbar.update(2)
+
+        x = unpack(x, height, width)
         lat_processor = LATENT_PROCESSOR_COMFY()
-        x=lat_processor(x)
+        x = lat_processor(x)
         lat_ret = {"samples": x}
-        
+
         #model.model.to(offload_device)
         return (lat_ret,)
 
@@ -405,7 +402,7 @@ class LoadFluxIPAdapter:
     RETURN_NAMES = ("ipadapterFlux",)
     FUNCTION = "loadmodel"
     CATEGORY = "XLabsNodes"
-    
+
     def loadmodel(self, ipadatper, clip_vision, provider):
         pbar = ProgressBar(6)
         device=mm.get_torch_device()
@@ -460,34 +457,34 @@ class ApplyFluxIPAdapter:
 
     def applymodel(self, model, ip_adapter_flux, image, strength_model):
         debug=False
-     
-        
+
+
         device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
-        
+
         is_patched = is_model_pathched(model.model)
-        
+
         print(f"Is model already patched? {is_patched}")
-        mul = 1 
+        mul = 1
         if is_patched:
             pbar = ProgressBar(5)
         else:
             mul = 3
             count = len(model.model.diffusion_model.double_blocks)
             pbar = ProgressBar(5*mul+count)
-            
+
         bi = model.clone()
         tyanochky = bi.model
-        
+
         clip = ip_adapter_flux['clip_vision']
-        
+
         pixel_values = clip_preprocess(image.to(clip.load_device)).float()
         out = clip.model(pixel_values=pixel_values)
         neg_out = clip.model(pixel_values=torch.zeros_like(pixel_values))
-        
+
         neg_out = neg_out[2].to(dtype=torch.bfloat16)
         #print(out[0].shape, out[1].shape, out[2].shape)
-        
+
         embeds = out[2].to(dtype=torch.bfloat16)
         pbar.update(mul)
         if not is_patched:
@@ -497,7 +494,7 @@ class ApplyFluxIPAdapter:
         else:
             print("Model already updated")
         pbar.update(mul)
-    
+
         #TYANOCHKYBY=16
         ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
         ip_adapter_flux['ip_adapter_proj_model'].to(dtype=torch.bfloat16)
