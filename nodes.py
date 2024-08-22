@@ -496,7 +496,7 @@ class ApplyFluxIPAdapter:
             out = clip(pixel_values=pixel_values)
             neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
             neg_out = neg_out[2].to(dtype=torch.bfloat16)
-            embeds = out[2].to(dtype=torch.bfloat16)
+            out = out[2].to(dtype=torch.bfloat16)
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
@@ -509,7 +509,7 @@ class ApplyFluxIPAdapter:
         #TYANOCHKYBY=16
         ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
         ip_adapter_flux['ip_adapter_proj_model'].to(dtype=torch.bfloat16)
-        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](embeds.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
+        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
         ip_neg_pr = ip_adapter_flux['ip_adapter_proj_model'](neg_out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
 
 
