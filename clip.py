@@ -26,7 +26,7 @@ class FluxClipViT:
                 use_safetensors = True,
             )
         self.image_processor = CLIPImageProcessor()
-
+        self.load_device = next(self.model.parameters()).device
 
     def __call__(self, img):
         #img = self.image_processor(
