@@ -501,7 +501,7 @@ class ApplyFluxIPAdapter:
             #image = torch.permute(image, (0, ))
             #print(image.shape)
             #print(image)
-            clip_device = next(clip.parameters()).device
+            clip_device = next(clip.model.parameters()).device
             image = torch.clip(image*255, 0.0, 255)
             out = clip(image).to(dtype=torch.bfloat16)
             neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
