@@ -490,7 +490,7 @@ class ApplyFluxIPAdapter:
         
         if isinstance(clip, FluxClipViT):
             #torch.Size([1, 526, 526, 3])
-            image = torch.permute(image, (0, ))
+            #image = torch.permute(image, (0, ))
             #print(image.shape)
             #print(image)
             image = torch.clip(image*255, 0.0, 255)
