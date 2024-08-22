@@ -268,6 +268,7 @@ class XlabsSampler:
                     "timestep_to_start_cfg": ("INT",  {"default": 20, "min": 0, "max": 100}),
                     "true_gs": ("FLOAT",  {"default": 3, "min": 0, "max": 100}),
                     "image_to_image_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                    "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                 },
             "optional": {
                     "latent_image": ("LATENT", {"default": None}),
@@ -281,7 +282,8 @@ class XlabsSampler:
 
     def sampling(self, model, conditioning, neg_conditioning,
                  noise_seed, steps, timestep_to_start_cfg, true_gs,
-                 image_to_image_strength, latent_image=None, controlnet_condition=None
+                 image_to_image_strength, denoise,
+                 latent_image=None, controlnet_condition=None
                  ):
         additional_steps = 11 if controlnet_condition is None else 12
         mm.load_model_gpu(model)
@@ -295,6 +297,8 @@ class XlabsSampler:
             guidance = 1.0
 
         device=mm.get_torch_device()
+        if torch.backends.mps.is_available():
+            device = torch.device("mps")
         if torch.cuda.is_bf16_supported():
             dtype_model = torch.bfloat16#
         else:
@@ -319,6 +323,7 @@ class XlabsSampler:
             orig_x=lat_processor2.go_back(orig_x)
             orig_x=orig_x.to(device, dtype=dtype_model)
 
+        
         timesteps = get_schedule(
             steps,
             (width // 8) * (height // 8) // 4,
@@ -329,10 +334,16 @@ class XlabsSampler:
         except:
             pass
         x.to(device)
+        
         inmodel.diffusion_model.to(device)
         inp_cond = prepare(conditioning[0][0], conditioning[0][1]['pooled_output'], img=x)
         neg_inp_cond = prepare(neg_conditioning[0][0], neg_conditioning[0][1]['pooled_output'], img=x)
 
+        if denoise<=0.99:
+            try:
+                timesteps=timesteps[:int(len(timesteps)*denoise)]
+            except:
+                pass
         # for sampler preview
         x0_output = {}
         callback = latent_preview.prepare_callback(model, len(timesteps) - 1, x0_output)

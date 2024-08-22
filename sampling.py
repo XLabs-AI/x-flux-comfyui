@@ -252,9 +252,14 @@ def denoise_controlnet(
     #init_latents = rearrange(init_latents, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
     if image2image_strength is not None and orig_image is not None:
 
-        t_idx = int((np.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
+        t_idx = np.clip(
+            int((np.clip(image2image_strength, 0.0, 1.0)) * len(timesteps)), 0, 1
+        )
         t = timesteps[t_idx]
-        timesteps = timesteps[t_idx:]
+        try:
+            timesteps = timesteps[t_idx:]
+        except:
+            pass
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2).to(img.device, dtype = img.dtype)
         img = t * img + (1.0 - t) * orig_image
     controlnet.to(img.device, dtype=img.dtype)
