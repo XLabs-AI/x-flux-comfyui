@@ -1,5 +1,5 @@
 import os
-from clip import FluxClipViT
+
 import comfy.model_management as mm
 import comfy.model_patcher as mp
 from comfy.utils import ProgressBar
@@ -33,6 +33,7 @@ from .xflux.src.flux.model import Flux as ModFlux
 
 
 from comfy.utils import get_attr, set_attr
+from .clip import FluxClipViT
 
 
 dir_xlabs = os.path.join(folder_paths.models_dir, "xlabs")
