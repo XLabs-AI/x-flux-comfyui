@@ -236,3 +236,21 @@ def comfy_to_xlabs_lora(sd):
             new_k=k
         sd_out[new_k] = sd[k]
     return sd_out
+
+def LinearStrengthModel(start, finish, size):
+    return [
+        (start + (finish - start) * (i / (size - 1))) for i in range(size)
+        ]
+def FirstHalfStrengthModel(start, finish, size):
+    sizehalf = size//2
+    arr = [
+        (start + (finish - start) * (i / (sizehalf - 1))) for i in range(sizehalf)
+        ]
+    return arr+[finish]*(size-sizehalf)
+def SecondHalfStrengthModel(start, finish, size):
+    sizehalf = size//2
+    arr = [
+        (start + (finish - start) * (i / (sizehalf - 1))) for i in range(sizehalf)
+        ]
+    return [start]*sizehalf+arr
+
