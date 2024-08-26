@@ -20,7 +20,8 @@ from .xflux.src.flux.util import (configs, load_ae, load_clip,
 
 
 from .utils import (FirstHalfStrengthModel, FluxUpdateModules, LinearStrengthModel, 
-                SecondHalfStrengthModel, attn_processors, set_attn_processor,
+                SecondHalfStrengthModel, SigmoidStrengthModel, attn_processors, 
+                set_attn_processor,
                 is_model_pathched, merge_loras, LATENT_PROCESSOR_COMFY,
                 comfy_to_xlabs_lora, check_is_comfy_lora)
 from .layers import (DoubleStreamBlockLoraProcessor,
@@ -567,7 +568,7 @@ class ApplyAdvancedFluxIPAdapter:
                               "image": ("IMAGE",),
                               "begin_strength": ("FLOAT", {"default": 0.0, "min": -100.0, "max": 100.0, "step": 0.01}),
                               "end_strength": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
-                              "smothing_type": (["Linear", "FirstHalf", "SecondHalf"],),
+                              "smothing_type": (["Linear", "First half", "Second half", "Sigmoid"],),
                               }}
 
     RETURN_TYPES = ("MODEL",)
@@ -636,10 +637,12 @@ class ApplyAdvancedFluxIPAdapter:
 
         if smothing_type == "Linear":
             strength_model = LinearStrengthModel(begin_strength, end_strength, count)
-        elif smothing_type == "FirstHalf":
+        elif smothing_type == "First half":
             strength_model = FirstHalfStrengthModel(begin_strength, end_strength, count)
-        elif smothing_type == "SecondHalf":
+        elif smothing_type == "Second half":
             strength_model = SecondHalfStrengthModel(begin_strength, end_strength, count)
+        elif smothing_type == "Sigmoid":
+            strength_model = SigmoidStrengthModel(begin_strength, end_strength, count)
         else:
             raise ValueError("Invalid smothing type")
 

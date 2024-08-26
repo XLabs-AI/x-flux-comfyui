@@ -252,5 +252,9 @@ def SecondHalfStrengthModel(start, finish, size):
     arr = [
         (start + (finish - start) * (i / (sizehalf - 1))) for i in range(sizehalf)
         ]
-    return [start]*sizehalf+arr
-
+    return [start]*(size-sizehalf)+arr
+def SigmoidStrengthModel(start, finish, size):
+    def fade_out(x, x1, x2):
+        return 1 / (1 + np.exp(-(x - (x1 + x2) / 2) * 8 / (x2 - x1)))
+    arr = [start + (finish - start) * (fade_out(i, 0, size) - 0.5) for i in range(size)]
+    return arr
