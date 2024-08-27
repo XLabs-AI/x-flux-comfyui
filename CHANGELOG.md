@@ -7,7 +7,6 @@
 - IPAdapter controlling features
 - IPAdapter compatablity with VIT
 - Offloading support
-- GGUF support
 
 ## [Unreleased]
 
@@ -19,7 +18,8 @@
 ### Added
 - New clip-vit
 - Latent preview
-- 
+- GGUF Support
+
 ## [0.3.45]
 
 ### Added
