@@ -2,8 +2,8 @@ from comfy.ldm.flux.layers import DoubleStreamBlock as DSBold
 import copy
 import torch
 from .xflux.src.flux.modules.layers import DoubleStreamBlock as DSBnew
-from .layers import (DoubleStreamBlockLoraProcessor, 
-                     DoubleStreamBlockProcessor, 
+from .layers import (DoubleStreamBlockLoraProcessor,
+                     DoubleStreamBlockProcessor,
                      DoubleStreamBlockLorasMixerProcessor,
                      DoubleStreamMixerProcessor)
 
@@ -12,14 +12,18 @@ from comfy.utils import get_attr, set_attr
 import numpy as np
 
 def CopyDSB(oldDSB):
-    
+
     if isinstance(oldDSB, DSBold):
         tyan = copy.copy(oldDSB)
-        
-        mlp_hidden_dim  = tyan.img_mlp[0].out_features
+
+        if hasattr(tyan.img_mlp[0], 'out_features'):
+            mlp_hidden_dim = tyan.img_mlp[0].out_features
+        else:
+            mlp_hidden_dim = 12288
+
         mlp_ratio = mlp_hidden_dim / tyan.hidden_size
         bi = DSBnew(hidden_size=tyan.hidden_size, num_heads=tyan.num_heads, mlp_ratio=mlp_ratio)
-        #better use __dict__ but I bit scared 
+        #better use __dict__ but I bit scared
         (
             bi.img_mod, bi.img_norm1, bi.img_attn, bi.img_norm2,
             bi.img_mlp, bi.txt_mod, bi.txt_norm1, bi.txt_attn, bi.txt_norm2, bi.txt_mlp
@@ -31,7 +35,7 @@ def CopyDSB(oldDSB):
 
         return bi
     return oldDSB
-    
+
 def copy_model(orig, new):
     new = copy.copy(new)
     new.model = copy.copy(orig.model)
@@ -74,14 +78,14 @@ def FluxUpdateModules(flux_model, pbar=None):
         #if "double" in k:
     count = len(flux_model.diffusion_model.double_blocks)
     patches = {}
-    
+
     for i in range(count):
         if pbar is not None:
             pbar.update(1)
         patches[f"double_blocks.{i}"]=CopyDSB(flux_model.diffusion_model.double_blocks[i])
         flux_model.diffusion_model.double_blocks[i]=CopyDSB(flux_model.diffusion_model.double_blocks[i])
     return patches
-        
+
 def is_model_pathched(model):
     def test(mod):
         if isinstance(mod, DSBnew):
@@ -101,7 +105,7 @@ def attn_processors(model_flux):
     processors = {}
 
     def fn_recursive_add_processors(name: str, module: torch.nn.Module, procs):
-        
+
         if hasattr(module, "set_processor"):
             procs[f"{name}.processor"] = module.processor
         for sub_name, child in module.named_children():
@@ -117,7 +121,7 @@ def merge_loras(lora1, lora2):
     if isinstance(lora1, DoubleStreamMixerProcessor):
         new_block.set_loras(*lora1.get_loras())
         new_block.set_ip_adapters(lora1.get_ip_adapters())
-    elif isinstance(lora1, DoubleStreamBlockLoraProcessor): 
+    elif isinstance(lora1, DoubleStreamBlockLoraProcessor):
         new_block.add_lora(lora1)
     else:
         pass
@@ -129,7 +133,7 @@ def merge_loras(lora1, lora2):
     else:
         pass
     return new_block
-        
+
 def set_attn_processor(model_flux, processor):
     r"""
     Sets the attention processor to use to compute attention.
@@ -161,7 +165,7 @@ def set_attn_processor(model_flux, processor):
                 if not isinstance(processor, dict):
                     new_block.add_lora(processor)
                 else:
-                    
+
                     new_block.add_lora(processor.pop(f"{name}.processor"))
                 module.set_processor(new_block)
                 #block = set_attr(module, "", new_block)
@@ -186,7 +190,7 @@ def set_attn_processor(model_flux, processor):
         fn_recursive_attn_processor(name, module, processor)
 
 class LATENT_PROCESSOR_COMFY:
-    def __init__(self):        
+    def __init__(self):
         self.scale_factor = 0.3611
         self.shift_factor = 0.1159
         self.latent_rgb_factors =[
@@ -236,3 +240,25 @@ def comfy_to_xlabs_lora(sd):
             new_k=k
         sd_out[new_k] = sd[k]
     return sd_out
+
+def LinearStrengthModel(start, finish, size):
+    return [
+        (start + (finish - start) * (i / (size - 1))) for i in range(size)
+        ]
+def FirstHalfStrengthModel(start, finish, size):
+    sizehalf = size//2
+    arr = [
+        (start + (finish - start) * (i / (sizehalf - 1))) for i in range(sizehalf)
+        ]
+    return arr+[finish]*(size-sizehalf)
+def SecondHalfStrengthModel(start, finish, size):
+    sizehalf = size//2
+    arr = [
+        (start + (finish - start) * (i / (sizehalf - 1))) for i in range(sizehalf)
+        ]
+    return [start]*(size-sizehalf)+arr
+def SigmoidStrengthModel(start, finish, size):
+    def fade_out(x, x1, x2):
+        return 1 / (1 + np.exp(-(x - (x1 + x2) / 2) * 8 / (x2 - x1)))
+    arr = [start + (finish - start) * (fade_out(i, 0, size) - 0.5) for i in range(size)]
+    return arr
