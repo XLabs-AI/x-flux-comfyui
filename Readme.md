@@ -1,4 +1,4 @@
-# *[Guide](/guide.md)*
+# *[Guide](/Guide.md)*
 
 # How to use
 ![FLUX Finetuning scripts](./assets/flux-comfy-ui-nodes-dark-rev1.png)
