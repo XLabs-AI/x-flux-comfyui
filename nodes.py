@@ -238,6 +238,33 @@ class ApplyFluxControlNet:
         return {"required": {"controlnet": ("FluxControlNet",),
                              "image": ("IMAGE", ),
                              "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                            }}
+
+    RETURN_TYPES = ("ControlNetCondition",)
+    RETURN_NAMES = ("controlnet_condition",)
+    FUNCTION = "prepare"
+    CATEGORY = "XLabsNodes"
+
+    def prepare(self, controlnet, image, strength):
+        device=mm.get_torch_device()
+        controlnet_image = torch.from_numpy((np.array(image) * 2) - 1)
+        controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(torch.bfloat16).to(device)
+
+        ret_cont = {
+            "img": controlnet_image,
+            "controlnet_strength": strength,
+            "model": controlnet["model"],
+            "start": 0.0,
+            "end": 1.0
+        }
+        return (ret_cont,)
+
+class ApplyAdvancedFluxControlNet:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {"controlnet": ("FluxControlNet",),
+                             "image": ("IMAGE", ),
+                             "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                              "start": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                              "end": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01})
                               }}
@@ -694,6 +721,7 @@ NODE_CLASS_MAPPINGS = {
     "FluxLoraLoader": LoadFluxLora,
     "LoadFluxControlNet": LoadFluxControlNet,
     "ApplyFluxControlNet": ApplyFluxControlNet,
+    "ApplyAdvancedFluxControlNet": ApplyAdvancedFluxControlNet,
     "XlabsSampler": XlabsSampler,
     "ApplyFluxIPAdapter": ApplyFluxIPAdapter,
     "LoadFluxIPAdapter": LoadFluxIPAdapter,
@@ -703,6 +731,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
     "LoadFluxControlNet": "Load Flux ControlNet",
     "ApplyFluxControlNet": "Apply Flux ControlNet",
+    "ApplyAdvancedFluxControlNet": "Apply Advanced Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
     "ApplyFluxIPAdapter": "Apply Flux IPAdapter",
     "LoadFluxIPAdapter": "Load Flux IPAdatpter",
