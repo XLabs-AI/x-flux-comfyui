@@ -237,8 +237,8 @@ class ApplyFluxControlNet:
     def INPUT_TYPES(s):
         return {"required": {"controlnet": ("FluxControlNet",),
                              "image": ("IMAGE", ),
-                             "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01})
-                              }}
+                             "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                            }}
 
     RETURN_TYPES = ("ControlNetCondition",)
     RETURN_NAMES = ("controlnet_condition",)
@@ -254,6 +254,37 @@ class ApplyFluxControlNet:
             "img": controlnet_image,
             "controlnet_strength": strength,
             "model": controlnet["model"],
+            "start": 0.0,
+            "end": 1.0
+        }
+        return (ret_cont,)
+
+class ApplyAdvancedFluxControlNet:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {"controlnet": ("FluxControlNet",),
+                             "image": ("IMAGE", ),
+                             "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                             "start": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                             "end": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01})
+                              }}
+
+    RETURN_TYPES = ("ControlNetCondition",)
+    RETURN_NAMES = ("controlnet_condition",)
+    FUNCTION = "prepare"
+    CATEGORY = "XLabsNodes"
+
+    def prepare(self, controlnet, image, strength, start, end):
+        device=mm.get_torch_device()
+        controlnet_image = torch.from_numpy((np.array(image) * 2) - 1)
+        controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(torch.bfloat16).to(device)
+
+        ret_cont = {
+            "img": controlnet_image,
+            "controlnet_strength": strength,
+            "model": controlnet["model"],
+            "start": start,
+            "end": end
         }
         return (ret_cont,)
 
@@ -302,9 +333,9 @@ class XlabsSampler:
         if torch.backends.mps.is_available():
             device = torch.device("mps")
         if torch.cuda.is_bf16_supported():
-            dtype_model = torch.bfloat16#
+            dtype_model = torch.bfloat16
         else:
-            dtype_model = torch.float16#
+            dtype_model = torch.float16
         #dtype_model = torch.bfloat16#model.model.diffusion_model.img_in.weight.dtype
         offload_device=mm.unet_offload_device()
 
@@ -372,10 +403,17 @@ class XlabsSampler:
             controlnet_image = torch.nn.functional.interpolate(
                 controlnet_image, size=(height, width), scale_factor=None, mode='bicubic',)
             controlnet_strength = controlnet_condition['controlnet_strength']
+            controlnet_start = controlnet_condition['start']
+            controlnet_end = controlnet_condition['end']
             controlnet.to(device, dtype=dtype_model)
             controlnet_image=controlnet_image.to(device, dtype=dtype_model)
             mm.load_models_gpu([model,])
             #mm.load_model_gpu(controlnet)
+
+            total_steps = len(timesteps)
+            start_step = int(controlnet_start * total_steps)
+            end_step = int(controlnet_end * total_steps)
+
             x = denoise_controlnet(
                 inmodel.diffusion_model, **inp_cond, controlnet=controlnet,
                 timesteps=timesteps, guidance=guidance,
@@ -391,6 +429,8 @@ class XlabsSampler:
                 callback=callback,
                 width=width,
                 height=height,
+                controlnet_start_step=start_step,
+                controlnet_end_step=end_step
             )
             #controlnet.to(offload_device)
 
@@ -681,6 +721,7 @@ NODE_CLASS_MAPPINGS = {
     "FluxLoraLoader": LoadFluxLora,
     "LoadFluxControlNet": LoadFluxControlNet,
     "ApplyFluxControlNet": ApplyFluxControlNet,
+    "ApplyAdvancedFluxControlNet": ApplyAdvancedFluxControlNet,
     "XlabsSampler": XlabsSampler,
     "ApplyFluxIPAdapter": ApplyFluxIPAdapter,
     "LoadFluxIPAdapter": LoadFluxIPAdapter,
@@ -690,6 +731,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
     "LoadFluxControlNet": "Load Flux ControlNet",
     "ApplyFluxControlNet": "Apply Flux ControlNet",
+    "ApplyAdvancedFluxControlNet": "Apply Advanced Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
     "ApplyFluxIPAdapter": "Apply Flux IPAdapter",
     "LoadFluxIPAdapter": "Load Flux IPAdatpter",

@@ -224,7 +224,7 @@ def denoise(
 
 def denoise_controlnet(
     model,
-    controlnet:None,
+    controlnet: None,
     # model input
     img: Tensor,
     img_ids: Tensor,
@@ -246,41 +246,52 @@ def denoise_controlnet(
     callback = None,
     width = 512,
     height = 512,
+    controlnet_start_step=0,
+    controlnet_end_step=None
 ):
     i = 0
 
-    #init_latents = rearrange(init_latents, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2)
     if image2image_strength is not None and orig_image is not None:
-
         t_idx = int((1 - np.clip(image2image_strength, 0.0, 1.0)) * len(timesteps))
         t = timesteps[t_idx]
         timesteps = timesteps[t_idx:]
         orig_image = rearrange(orig_image, "b c (h ph) (w pw) -> b (h w) (c ph pw)", ph=2, pw=2).to(img.device, dtype = img.dtype)
         img = t * img + (1.0 - t) * orig_image
-    img_ids=img_ids.to(img.device, dtype=img.dtype)
-    txt=txt.to(img.device, dtype=img.dtype)
-    txt_ids=txt_ids.to(img.device, dtype=img.dtype)
-    vec=vec.to(img.device, dtype=img.dtype)
+
+    img_ids = img_ids.to(img.device, dtype=img.dtype)
+    txt = txt.to(img.device, dtype=img.dtype)
+    txt_ids = txt_ids.to(img.device, dtype=img.dtype)
+    vec = vec.to(img.device, dtype=img.dtype)
     controlnet.to(img.device, dtype=img.dtype)
-    controlnet_cond=controlnet_cond.to(img.device, dtype=img.dtype)
+    controlnet_cond = controlnet_cond.to(img.device, dtype=img.dtype)
+
     if hasattr(model, "guidance_in"):
         guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
     else:
-        # this is ignored for schnell
         guidance_vec = None
-    for t_curr, t_prev in tqdm(zip(timesteps[:-1], timesteps[1:]), desc="Sampling", total = len(timesteps)-1):
+
+    if controlnet_end_step is None:
+        controlnet_end_step = len(timesteps) - 1
+
+    for t_curr, t_prev in tqdm(zip(timesteps[:-1], timesteps[1:]), desc="Sampling", total=len(timesteps)-1):
         t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
-        guidance_vec=guidance_vec.to(img.device, dtype=img.dtype)
-        block_res_samples = controlnet(
-                    img=img,
-                    img_ids=img_ids,
-                    controlnet_cond=controlnet_cond,
-                    txt=txt,
-                    txt_ids=txt_ids,
-                    y=vec,
-                    timesteps=t_vec,
-                    guidance=guidance_vec,
-                )
+        guidance_vec = guidance_vec.to(img.device, dtype=img.dtype)
+
+        if controlnet_start_step <= i <= controlnet_end_step:
+            block_res_samples = controlnet(
+                img=img,
+                img_ids=img_ids,
+                controlnet_cond=controlnet_cond,
+                txt=txt,
+                txt_ids=txt_ids,
+                y=vec,
+                timesteps=t_vec,
+                guidance=guidance_vec,
+            )
+            controlnet_hidden_states = [sample * controlnet_gs for sample in block_res_samples]
+        else:
+            controlnet_hidden_states = None
+
         pred = model_forward(
             model,
             img=img,
@@ -290,19 +301,25 @@ def denoise_controlnet(
             y=vec,
             timesteps=t_vec,
             guidance=guidance_vec,
-            block_controlnet_hidden_states=[i * controlnet_gs for i in block_res_samples]
+            block_controlnet_hidden_states=controlnet_hidden_states
         )
+
         if i >= timestep_to_start_cfg:
-            neg_block_res_samples = controlnet(
-                        img=img,
-                        img_ids=img_ids,
-                        controlnet_cond=controlnet_cond,
-                        txt=neg_txt,
-                        txt_ids=neg_txt_ids,
-                        y=neg_vec,
-                        timesteps=t_vec,
-                        guidance=guidance_vec,
-                    )
+            if controlnet_start_step <= i <= controlnet_end_step:
+                neg_block_res_samples = controlnet(
+                    img=img,
+                    img_ids=img_ids,
+                    controlnet_cond=controlnet_cond,
+                    txt=neg_txt,
+                    txt_ids=neg_txt_ids,
+                    y=neg_vec,
+                    timesteps=t_vec,
+                    guidance=guidance_vec,
+                )
+                neg_controlnet_hidden_states = [sample * controlnet_gs for sample in neg_block_res_samples]
+            else:
+                neg_controlnet_hidden_states = None
+
             neg_pred = model_forward(
                 model,
                 img=img,
@@ -312,9 +329,8 @@ def denoise_controlnet(
                 y=neg_vec,
                 timesteps=t_vec,
                 guidance=guidance_vec,
-                block_controlnet_hidden_states=[i * controlnet_gs for i in neg_block_res_samples],
-                neg_mode = True,
-
+                block_controlnet_hidden_states=neg_controlnet_hidden_states,
+                neg_mode=True,
             )
             pred = neg_pred + true_gs * (pred - neg_pred)
         img = img + (t_prev - t_curr) * pred
