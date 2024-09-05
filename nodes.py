@@ -19,7 +19,9 @@ from .xflux.src.flux.util import (configs, load_ae, load_clip,
                             load_controlnet)
 
 
-from .utils import (FluxUpdateModules, attn_processors, set_attn_processor,
+from .utils import (FirstHalfStrengthModel, FluxUpdateModules, LinearStrengthModel, 
+                SecondHalfStrengthModel, SigmoidStrengthModel, attn_processors, 
+                set_attn_processor,
                 is_model_pathched, merge_loras, LATENT_PROCESSOR_COMFY,
                 comfy_to_xlabs_lora, check_is_comfy_lora)
 from .layers import (DoubleStreamBlockLoraProcessor,
@@ -235,8 +237,8 @@ class ApplyFluxControlNet:
     def INPUT_TYPES(s):
         return {"required": {"controlnet": ("FluxControlNet",),
                              "image": ("IMAGE", ),
-                             "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01})
-                              }}
+                             "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                            }}
 
     RETURN_TYPES = ("ControlNetCondition",)
     RETURN_NAMES = ("controlnet_condition",)
@@ -252,6 +254,37 @@ class ApplyFluxControlNet:
             "img": controlnet_image,
             "controlnet_strength": strength,
             "model": controlnet["model"],
+            "start": 0.0,
+            "end": 1.0
+        }
+        return (ret_cont,)
+
+class ApplyAdvancedFluxControlNet:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {"controlnet": ("FluxControlNet",),
+                             "image": ("IMAGE", ),
+                             "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                             "start": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                             "end": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01})
+                              }}
+
+    RETURN_TYPES = ("ControlNetCondition",)
+    RETURN_NAMES = ("controlnet_condition",)
+    FUNCTION = "prepare"
+    CATEGORY = "XLabsNodes"
+
+    def prepare(self, controlnet, image, strength, start, end):
+        device=mm.get_torch_device()
+        controlnet_image = torch.from_numpy((np.array(image) * 2) - 1)
+        controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(torch.bfloat16).to(device)
+
+        ret_cont = {
+            "img": controlnet_image,
+            "controlnet_strength": strength,
+            "model": controlnet["model"],
+            "start": start,
+            "end": end
         }
         return (ret_cont,)
 
@@ -299,18 +332,14 @@ class XlabsSampler:
         device=mm.get_torch_device()
         if torch.backends.mps.is_available():
             device = torch.device("mps")
-        # if torch.cuda.is_bf16_supported():
-        #     dtype_model = torch.bfloat16#
-        # else:
-        #     dtype_model = torch.float16#
-        # dtype_model = torch.bfloat16#
+
         dtype_model = inmodel.diffusion_model.img_in.weight.dtype
         if dtype_model in [torch.float8_e4m3fn,
                            torch.float8_e4m3fnuz,
                            torch.float8_e5m2,
                            torch.float8_e5m2fnuz]:
             dtype_model = torch.float16
-        
+      
         offload_device=mm.unet_offload_device()
 
         torch.manual_seed(noise_seed)
@@ -377,10 +406,17 @@ class XlabsSampler:
             controlnet_image = torch.nn.functional.interpolate(
                 controlnet_image, size=(height, width), scale_factor=None, mode='bicubic',)
             controlnet_strength = controlnet_condition['controlnet_strength']
+            controlnet_start = controlnet_condition['start']
+            controlnet_end = controlnet_condition['end']
             controlnet.to(device, dtype=dtype_model)
             controlnet_image=controlnet_image.to(device, dtype=dtype_model)
             mm.load_models_gpu([model,])
             #mm.load_model_gpu(controlnet)
+
+            total_steps = len(timesteps)
+            start_step = int(controlnet_start * total_steps)
+            end_step = int(controlnet_end * total_steps)
+
             x = denoise_controlnet(
                 inmodel.diffusion_model, **inp_cond, controlnet=controlnet,
                 timesteps=timesteps, guidance=guidance,
@@ -396,6 +432,8 @@ class XlabsSampler:
                 callback=callback,
                 width=width,
                 height=height,
+                controlnet_start_step=start_step,
+                controlnet_end_step=end_step
             )
             #controlnet.to(offload_device)
 
@@ -565,19 +603,140 @@ class ApplyFluxIPAdapter:
 
 
 
+class ApplyAdvancedFluxIPAdapter:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": { "model": ("MODEL",),
+                              "ip_adapter_flux": ("IP_ADAPTER_FLUX",),
+                              "image": ("IMAGE",),
+                              "begin_strength": ("FLOAT", {"default": 0.0, "min": -100.0, "max": 100.0, "step": 0.01}),
+                              "end_strength": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
+                              "smothing_type": (["Linear", "First half", "Second half", "Sigmoid"],),
+                              }}
+
+    RETURN_TYPES = ("MODEL",)
+    RETURN_NAMES = ("MODEL",)
+    FUNCTION = "applymodel"
+    CATEGORY = "XLabsNodes"
+
+    def applymodel(self, model, ip_adapter_flux, image, begin_strength, end_strength, smothing_type):
+        debug=False
+
+
+        device=mm.get_torch_device()
+        offload_device=mm.unet_offload_device()
+
+        is_patched = is_model_pathched(model.model)
+
+        print(f"Is model already patched? {is_patched}")
+        mul = 1
+        if is_patched:
+            pbar = ProgressBar(5)
+        else:
+            mul = 3
+            count = len(model.model.diffusion_model.double_blocks)
+            pbar = ProgressBar(5*mul+count)
+
+        bi = model.clone()
+        tyanochky = bi.model
+
+        clip = ip_adapter_flux['clip_vision']
+        
+        if isinstance(clip, FluxClipViT):
+            #torch.Size([1, 526, 526, 3])
+            #image = torch.permute(image, (0, ))
+            #print(image.shape)
+            #print(image)
+            clip_device = next(clip.model.parameters()).device
+            image = torch.clip(image*255, 0.0, 255)
+            out = clip(image).to(dtype=torch.bfloat16)
+            neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
+        else:
+            print("Using old vit clip")
+            clip_device = next(clip.parameters()).device
+            pixel_values = clip_preprocess(image.to(clip_device)).float()
+            out = clip(pixel_values=pixel_values)
+            neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
+            neg_out = neg_out[2].to(dtype=torch.bfloat16)
+            out = out[2].to(dtype=torch.bfloat16)
+        
+        pbar.update(mul)
+        if not is_patched:
+            print("We are patching diffusion model, be patient please")
+            patches=FluxUpdateModules(tyanochky, pbar)
+            print("Patched succesfully!")
+        else:
+            print("Model already updated")
+        pbar.update(mul)
+
+        #TYANOCHKYBY=16
+        ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
+        ip_adapter_flux['ip_adapter_proj_model'].to(dtype=torch.bfloat16)
+        out=torch.mean(out, 0)
+        neg_out=torch.mean(neg_out, 0)
+        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
+        ip_neg_pr = ip_adapter_flux['ip_adapter_proj_model'](neg_out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
+
+
+        count = len(ip_adapter_flux['double_blocks'])
+
+        if smothing_type == "Linear":
+            strength_model = LinearStrengthModel(begin_strength, end_strength, count)
+        elif smothing_type == "First half":
+            strength_model = FirstHalfStrengthModel(begin_strength, end_strength, count)
+        elif smothing_type == "Second half":
+            strength_model = SecondHalfStrengthModel(begin_strength, end_strength, count)
+        elif smothing_type == "Sigmoid":
+            strength_model = SigmoidStrengthModel(begin_strength, end_strength, count)
+        else:
+            raise ValueError("Invalid smothing type")
+
+
+        ipad_blocks = []
+        for i, block in enumerate(ip_adapter_flux['double_blocks']):
+            ipad = IPProcessor(block.context_dim, block.hidden_dim, ip_projes, strength_model[i])
+            ipad.load_state_dict(block.state_dict())
+            ipad.in_hidden_states_neg = ip_neg_pr
+            ipad.in_hidden_states_pos = ip_projes
+            ipad.to(dtype=torch.bfloat16)
+            npp = DoubleStreamMixerProcessor()
+            npp.add_ipadapter(ipad)
+            ipad_blocks.append(npp)
+        pbar.update(mul)
+        i=0
+        for name, _ in attn_processors(tyanochky.diffusion_model).items():
+            attribute = f"diffusion_model.{name}"
+            #old = copy.copy(get_attr(bi.model, attribute))
+            if attribute in model.object_patches.keys():
+                old = copy.copy((model.object_patches[attribute]))
+            else:
+                old = None
+            processor = merge_loras(old, ipad_blocks[i])
+            processor.to(device, dtype=torch.bfloat16)
+            bi.add_object_patch(attribute, processor)
+            i+=1
+        pbar.update(mul)
+        return (bi,)
+
+
+
 NODE_CLASS_MAPPINGS = {
     "FluxLoraLoader": LoadFluxLora,
     "LoadFluxControlNet": LoadFluxControlNet,
     "ApplyFluxControlNet": ApplyFluxControlNet,
+    "ApplyAdvancedFluxControlNet": ApplyAdvancedFluxControlNet,
     "XlabsSampler": XlabsSampler,
     "ApplyFluxIPAdapter": ApplyFluxIPAdapter,
     "LoadFluxIPAdapter": LoadFluxIPAdapter,
+    "ApplyAdvancedFluxIPAdapter": ApplyAdvancedFluxIPAdapter,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
     "LoadFluxControlNet": "Load Flux ControlNet",
     "ApplyFluxControlNet": "Apply Flux ControlNet",
+    "ApplyAdvancedFluxControlNet": "Apply Advanced Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
     "ApplyFluxIPAdapter": "Apply Flux IPAdapter",
-    "LoadFluxIPAdapter": "Load Flux IPAdatpter"
+    "LoadFluxIPAdapter": "Load Flux IPAdatpter",
+    "ApplyAdvancedFluxIPAdapter": "Apply Advanced Flux IPAdapter",
 }
