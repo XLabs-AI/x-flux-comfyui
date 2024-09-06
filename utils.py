@@ -262,3 +262,16 @@ def SigmoidStrengthModel(start, finish, size):
         return 1 / (1 + np.exp(-(x - (x1 + x2) / 2) * 8 / (x2 - x1)))
     arr = [start + (finish - start) * (fade_out(i, 0, size) - 0.5) for i in range(size)]
     return arr
+
+class ControlNetContainer:
+    def __init__(
+            self, controlnet, controlnet_cond, 
+            controlnet_gs, controlnet_start_step,
+            controlnet_end_step,
+            
+            ):
+        self.controlnet_cond = controlnet_cond
+        self.controlnet_gs = controlnet_gs
+        self.controlnet_start_step = controlnet_start_step
+        self.controlnet_end_step = controlnet_end_step
+        self.controlnet = controlnet
