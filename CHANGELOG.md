@@ -16,6 +16,7 @@
 ## [0.4.2]
 
 ### Added
+- ControlNet merge
 - New clip-vit
 - Latent preview
 - GGUF Support
