@@ -273,5 +273,5 @@ class ControlNetContainer:
         self.controlnet_cond = controlnet_cond
         self.controlnet_gs = controlnet_gs
         self.controlnet_start_step = controlnet_start_step
-        self.controlent_end_step = controlnet_end_step
+        self.controlnet_end_step = controlnet_end_step
         self.controlnet = controlnet
