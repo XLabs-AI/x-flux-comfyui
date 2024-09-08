@@ -19,8 +19,8 @@ from .xflux.src.flux.util import (configs, load_ae, load_clip,
                             load_controlnet)
 
 
-from .utils import (FirstHalfStrengthModel, FluxUpdateModules, LinearStrengthModel, 
-                SecondHalfStrengthModel, SigmoidStrengthModel, attn_processors, 
+from .utils import (FirstHalfStrengthModel, FluxUpdateModules, LinearStrengthModel,
+                SecondHalfStrengthModel, SigmoidStrengthModel, attn_processors,
                 set_attn_processor,
                 is_model_pathched, merge_loras, LATENT_PROCESSOR_COMFY,
                 ControlNetContainer,
@@ -382,7 +382,7 @@ class XlabsSampler:
             orig_x=lat_processor2.go_back(orig_x)
             orig_x=orig_x.to(device, dtype=dtype_model)
 
-        
+
         timesteps = get_schedule(
             steps,
             (width // 8) * (height // 8) // 4,
@@ -393,7 +393,7 @@ class XlabsSampler:
         except:
             pass
         x.to(device)
-        
+
         inmodel.diffusion_model.to(device)
         inp_cond = prepare(conditioning[0][0], conditioning[0][1]['pooled_output'], img=x)
         neg_inp_cond = prepare(neg_conditioning[0][0], neg_conditioning[0][1]['pooled_output'], img=x)
@@ -490,7 +490,7 @@ class LoadFluxIPAdapter:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                "ipadatper": (folder_paths.get_filename_list("xlabs_ipadapters"),),
+                "ipadapter": (folder_paths.get_filename_list("xlabs_ipadapters"),),
                 "clip_vision": (folder_paths.get_filename_list("clip_vision"),),
                 "provider": (["CPU", "GPU",],),
             }
@@ -500,22 +500,22 @@ class LoadFluxIPAdapter:
     FUNCTION = "loadmodel"
     CATEGORY = "XLabsNodes"
 
-    def loadmodel(self, ipadatper, clip_vision, provider):
+    def loadmodel(self, ipadapter, clip_vision, provider):
         pbar = ProgressBar(6)
         device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
         pbar.update(1)
         ret_ipa = {}
-        path = os.path.join(dir_xlabs_ipadapters, ipadatper)
+        path = os.path.join(dir_xlabs_ipadapters, ipadapter)
         ckpt = load_safetensors(path)
         pbar.update(1)
         path_clip = folder_paths.get_full_path("clip_vision", clip_vision)
-        
-        try: 
+
+        try:
             clip = FluxClipViT(path_clip)
         except:
             clip = load_clip_vision(path_clip).model
-        
+
         ret_ipa["clip_vision"] = clip
         prefix = "double_blocks."
         blocks = {}
@@ -579,7 +579,7 @@ class ApplyFluxIPAdapter:
         tyanochky = bi.model
 
         clip = ip_adapter_flux['clip_vision']
-        
+
         if isinstance(clip, FluxClipViT):
             #torch.Size([1, 526, 526, 3])
             #image = torch.permute(image, (0, ))
@@ -594,10 +594,10 @@ class ApplyFluxIPAdapter:
             clip_device = next(clip.parameters()).device
             pixel_values = clip_preprocess(image.to(clip_device)).float()
             out = clip(pixel_values=pixel_values)
-            neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
+            neg_out = clip(pixel_values=torch.zeros_like(pixel_values))
             neg_out = neg_out[2].to(dtype=torch.bfloat16)
             out = out[2].to(dtype=torch.bfloat16)
-        
+
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
@@ -680,7 +680,7 @@ class ApplyAdvancedFluxIPAdapter:
         tyanochky = bi.model
 
         clip = ip_adapter_flux['clip_vision']
-        
+
         if isinstance(clip, FluxClipViT):
             #torch.Size([1, 526, 526, 3])
             #image = torch.permute(image, (0, ))
@@ -695,10 +695,10 @@ class ApplyAdvancedFluxIPAdapter:
             clip_device = next(clip.parameters()).device
             pixel_values = clip_preprocess(image.to(clip_device)).float()
             out = clip(pixel_values=pixel_values)
-            neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
+            neg_out = clip(pixel_values=torch.zeros_like(pixel_values))
             neg_out = neg_out[2].to(dtype=torch.bfloat16)
             out = out[2].to(dtype=torch.bfloat16)
-        
+
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
@@ -776,6 +776,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ApplyAdvancedFluxControlNet": "Apply Advanced Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
     "ApplyFluxIPAdapter": "Apply Flux IPAdapter",
-    "LoadFluxIPAdapter": "Load Flux IPAdatpter",
+    "LoadFluxIPAdapter": "Load Flux IPAdapter",
     "ApplyAdvancedFluxIPAdapter": "Apply Advanced Flux IPAdapter",
 }

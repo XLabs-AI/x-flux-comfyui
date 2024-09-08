@@ -37,7 +37,7 @@ def single_blocks_init(model, params, dtype):
                 dtype
             )
             for _ in range(params.depth_single_blocks)
-            
+
         ]
     )
 

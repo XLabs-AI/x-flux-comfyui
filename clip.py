@@ -1,7 +1,7 @@
 import json
 import os
-from transformers import (CLIPImageProcessor, 
-                          CLIPVisionModelWithProjection, 
+from transformers import (CLIPImageProcessor,
+                          CLIPVisionModelWithProjection,
                           CLIPVisionConfig,
                           AutoConfig)
 
@@ -13,7 +13,7 @@ class FluxClipViT:
             self.model = CLIPVisionModelWithProjection.from_pretrained(
                 "openai/clip-vit-large-patch14"
             )
-            
+
         else:
             _dir = os.path.dirname(path_model)
             write_config(_dir)

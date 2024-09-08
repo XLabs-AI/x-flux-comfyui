@@ -146,7 +146,7 @@ def denoise(
                 y=neg_vec,
                 timesteps=t_vec,
                 guidance=guidance_vec,
-            )     
+            )
             pred = neg_pred + true_gs * (pred - neg_pred)
         img = img + (t_prev - t_curr) * pred
         i += 1
@@ -229,9 +229,9 @@ def denoise_controlnet(
                 timesteps=t_vec,
                 guidance=guidance_vec,
                 block_controlnet_hidden_states=[i * controlnet_gs for i in neg_block_res_samples]
-            )     
+            )
             pred = neg_pred + true_gs * (pred - neg_pred)
-   
+
         img = img + (t_prev - t_curr) * pred
 
         i += 1
