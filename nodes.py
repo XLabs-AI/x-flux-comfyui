@@ -358,7 +358,8 @@ class XlabsSampler:
         device=mm.get_torch_device()
         if torch.backends.mps.is_available():
             device = torch.device("mps")
-        if torch.cuda.is_bf16_supported():
+            dtype_model = torch.float16
+        elif torch.cuda.is_bf16_supported():
             dtype_model = torch.bfloat16
         else:
             dtype_model = torch.float16
