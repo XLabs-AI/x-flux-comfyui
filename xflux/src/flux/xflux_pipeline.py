@@ -9,6 +9,7 @@ from src.flux.sampling import denoise, denoise_controlnet, get_noise, get_schedu
 from src.flux.util import (load_ae, load_clip, load_flow_model, load_t5, load_controlnet,
                            load_flow_model_quintized, Annotator, get_lora_rank, load_checkpoint)
 
+from ....utils import DTYPE_MODEL
 
 class XFluxPipeline:
     def __init__(self, model_type, device, offload: bool = False, seed: int = None):
@@ -59,7 +60,7 @@ class XFluxPipeline:
 
     def set_controlnet(self, control_type: str, local_path: str = None, repo_id: str = None, name: str = None):
         self.model.to(self.device)
-        self.controlnet = load_controlnet(self.model_type, self.device).to(torch.bfloat16)
+        self.controlnet = load_controlnet(self.model_type, self.device).to(DTYPE_MODEL)
 
         checkpoint = load_checkpoint(local_path, repo_id, name)
         self.controlnet.load_state_dict(checkpoint, strict=False)
@@ -87,7 +88,7 @@ class XFluxPipeline:
         if self.controlnet_loaded:
             controlnet_image = self.annotator(controlnet_image, width, height)
             controlnet_image = torch.from_numpy((np.array(controlnet_image) / 127.5) - 1)
-            controlnet_image = controlnet_image.permute(2, 0, 1).unsqueeze(0).to(torch.bfloat16).to(self.device)
+            controlnet_image = controlnet_image.permute(2, 0, 1).unsqueeze(0).to(DTYPE_MODEL).to(self.device)
 
         return self.forward(prompt, width, height, guidance, num_steps, controlnet_image,
          timestep_to_start_cfg=timestep_to_start_cfg, true_gs=true_gs, neg_prompt=neg_prompt)
@@ -95,7 +96,7 @@ class XFluxPipeline:
     def forward(self, prompt, width, height, guidance, num_steps, controlnet_image=None, timestep_to_start_cfg=0, true_gs=3, neg_prompt=""):
         x = get_noise(
             1, height, width, device=self.device,
-            dtype=torch.bfloat16, seed=self.seed
+            dtype=DTYPE_MODEL, seed=self.seed
         )
         timesteps = get_schedule(
             num_steps,

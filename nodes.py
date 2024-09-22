@@ -24,7 +24,7 @@ from .utils import (FirstHalfStrengthModel, FluxUpdateModules, LinearStrengthMod
                 set_attn_processor,
                 is_model_pathched, merge_loras, LATENT_PROCESSOR_COMFY,
                 ControlNetContainer,
-                comfy_to_xlabs_lora, check_is_comfy_lora)
+                comfy_to_xlabs_lora, check_is_comfy_lora, DTYPE_MODEL, DEVICE)
 from .layers import (DoubleStreamBlockLoraProcessor,
                      DoubleStreamBlockProcessor,
                      DoubleStreamBlockLorasMixerProcessor,
@@ -103,8 +103,6 @@ class LoadFluxLora:
     def loadmodel(self, model, lora_name, strength_model):
         debug=False
 
-
-        device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
 
         is_patched = is_model_pathched(model.model)
@@ -129,7 +127,7 @@ class LoadFluxLora:
                 pass
 
         pbar.update(mul)
-        bi.model.to(device)
+        bi.model.to(DEVICE)
         checkpoint, lora_rank = load_flux_lora(os.path.join(dir_xlabs_loras, lora_name))
         pbar.update(mul)
         if not is_patched:
@@ -154,7 +152,7 @@ class LoadFluxLora:
                     if name in k:
                         lora_state_dict[k[len(name) + 1:]] = checkpoint[k]
                 lora_attn_procs[name].load_state_dict(lora_state_dict)
-                lora_attn_procs[name].to(device)
+                lora_attn_procs[name].to(DEVICE)
                 tmp=DoubleStreamMixerProcessor()
                 tmp.add_lora(lora_attn_procs[name])
                 lora_attn_procs[name]=tmp
@@ -220,9 +218,8 @@ class LoadFluxControlNet:
     CATEGORY = "XLabsNodes"
 
     def loadmodel(self, model_name, controlnet_path):
-        device=mm.get_torch_device()
 
-        controlnet = load_controlnet(model_name, device)
+        controlnet = load_controlnet(model_name, DEVICE)
         checkpoint = load_checkpoint_controlnet(os.path.join(dir_xlabs_controlnets, controlnet_path))
         if checkpoint is not None:
             controlnet.load_state_dict(checkpoint)
@@ -252,9 +249,8 @@ class ApplyFluxControlNet:
     CATEGORY = "XLabsNodes"
 
     def prepare(self, controlnet, image, strength, controlnet_condition = None):
-        device=mm.get_torch_device()
         controlnet_image = torch.from_numpy((np.array(image) * 2) - 1)
-        controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(torch.bfloat16).to(device)
+        controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(DTYPE_MODEL).to(DEVICE)
 
         if controlnet_condition is None:
             ret_cont = [{
@@ -297,9 +293,8 @@ class ApplyAdvancedFluxControlNet:
 
     def prepare(self, controlnet, image, strength, start, end, controlnet_condition = None):
 
-        device=mm.get_torch_device()
         controlnet_image = torch.from_numpy((np.array(image) * 2) - 1)
-        controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(torch.bfloat16).to(device)
+        controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(DTYPE_MODEL).to(DEVICE)
 
         ret_cont = {
             "img": controlnet_image,
@@ -355,14 +350,6 @@ class XlabsSampler:
         except:
             guidance = 1.0
 
-        device=mm.get_torch_device()
-        if torch.backends.mps.is_available():
-            device = torch.device("mps")
-        if torch.cuda.is_bf16_supported():
-            dtype_model = torch.bfloat16
-        else:
-            dtype_model = torch.float16
-        #dtype_model = torch.bfloat16#model.model.diffusion_model.img_in.weight.dtype
         offload_device=mm.unet_offload_device()
 
         torch.manual_seed(noise_seed)
@@ -372,15 +359,15 @@ class XlabsSampler:
         width = (w//2) * 16
 
         x = get_noise(
-            bc, height, width, device=device,
-            dtype=dtype_model, seed=noise_seed
+            bc, height, width, device=DEVICE,
+            dtype=DTYPE_MODEL, seed=noise_seed
         )
         orig_x = None
         if c==16:
             orig_x=latent_image['samples']
             lat_processor2 = LATENT_PROCESSOR_COMFY()
             orig_x=lat_processor2.go_back(orig_x)
-            orig_x=orig_x.to(device, dtype=dtype_model)
+            orig_x=orig_x.to(DEVICE, dtype=dtype_model)
 
         
         timesteps = get_schedule(
@@ -389,12 +376,12 @@ class XlabsSampler:
             shift=True,
         )
         try:
-            inmodel.to(device)
+            inmodel.to(DEVICE)
         except:
             pass
-        x.to(device)
+        x.to(DEVICE)
         
-        inmodel.diffusion_model.to(device)
+        inmodel.diffusion_model.to(DEVICE)
         inp_cond = prepare(conditioning[0][0], conditioning[0][1]['pooled_output'], img=x)
         neg_inp_cond = prepare(neg_conditioning[0][0], neg_conditioning[0][1]['pooled_output'], img=x)
 
@@ -431,8 +418,8 @@ class XlabsSampler:
                 controlnet_strength = controlnet_condition['controlnet_strength']
                 controlnet_start = controlnet_condition['start']
                 controlnet_end = controlnet_condition['end']
-                controlnet.to(device, dtype=dtype_model)
-                controlnet_image=controlnet_image.to(device, dtype=dtype_model)
+                controlnet.to(DEVICE, dtype=DTYPE_MODEL)
+                controlnet_image=controlnet_image.to(DEVICE, dtype=DTYPE_MODEL)
                 return {
                     "img": controlnet_image,
                     "controlnet_strength": controlnet_strength,
@@ -502,7 +489,6 @@ class LoadFluxIPAdapter:
 
     def loadmodel(self, ipadatper, clip_vision, provider):
         pbar = ProgressBar(6)
-        device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
         pbar.update(1)
         ret_ipa = {}
@@ -561,7 +547,6 @@ class ApplyFluxIPAdapter:
         debug=False
 
 
-        device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
 
         is_patched = is_model_pathched(model.model)
@@ -587,16 +572,16 @@ class ApplyFluxIPAdapter:
             #print(image)
             clip_device = next(clip.model.parameters()).device
             image = torch.clip(image*255, 0.0, 255)
-            out = clip(image).to(dtype=torch.bfloat16)
-            neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
+            out = clip(image).to(dtype=DTYPE_MODEL)
+            neg_out = clip(torch.zeros_like(image)).to(dtype=DTYPE_MODEL)
         else:
             print("Using old vit clip")
             clip_device = next(clip.parameters()).device
             pixel_values = clip_preprocess(image.to(clip_device)).float()
             out = clip(pixel_values=pixel_values)
             neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
-            neg_out = neg_out[2].to(dtype=torch.bfloat16)
-            out = out[2].to(dtype=torch.bfloat16)
+            neg_out = neg_out[2].to(dtype=DTYPE_MODEL)
+            out = out[2].to(dtype=DTYPE_MODEL)
         
         pbar.update(mul)
         if not is_patched:
@@ -609,9 +594,9 @@ class ApplyFluxIPAdapter:
 
         #TYANOCHKYBY=16
         ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
-        ip_adapter_flux['ip_adapter_proj_model'].to(dtype=torch.bfloat16)
-        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
-        ip_neg_pr = ip_adapter_flux['ip_adapter_proj_model'](neg_out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
+        ip_adapter_flux['ip_adapter_proj_model'].to(dtype=DTYPE_MODEL)
+        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](out.to(ip_projes_dev, dtype=DTYPE_MODEL)).to(DEVICE, dtype=DTYPE_MODEL)
+        ip_neg_pr = ip_adapter_flux['ip_adapter_proj_model'](neg_out.to(ip_projes_dev, dtype=DTYPE_MODEL)).to(DEVICE, dtype=DTYPE_MODEL)
 
 
         ipad_blocks = []
@@ -620,7 +605,7 @@ class ApplyFluxIPAdapter:
             ipad.load_state_dict(block.state_dict())
             ipad.in_hidden_states_neg = ip_neg_pr
             ipad.in_hidden_states_pos = ip_projes
-            ipad.to(dtype=torch.bfloat16)
+            ipad.to(dtype=DTYPE_MODEL)
             npp = DoubleStreamMixerProcessor()
             npp.add_ipadapter(ipad)
             ipad_blocks.append(npp)
@@ -634,7 +619,7 @@ class ApplyFluxIPAdapter:
             else:
                 old = None
             processor = merge_loras(old, ipad_blocks[i])
-            processor.to(device, dtype=torch.bfloat16)
+            processor.to(DEVICE, dtype=DTYPE_MODEL)
             bi.add_object_patch(attribute, processor)
             i+=1
         pbar.update(mul)
@@ -662,7 +647,6 @@ class ApplyAdvancedFluxIPAdapter:
         debug=False
 
 
-        device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
 
         is_patched = is_model_pathched(model.model)
@@ -688,16 +672,16 @@ class ApplyAdvancedFluxIPAdapter:
             #print(image)
             clip_device = next(clip.model.parameters()).device
             image = torch.clip(image*255, 0.0, 255)
-            out = clip(image).to(dtype=torch.bfloat16)
-            neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
+            out = clip(image).to(dtype=DTYPE_MODEL)
+            neg_out = clip(torch.zeros_like(image)).to(dtype=DTYPE_MODEL)
         else:
             print("Using old vit clip")
             clip_device = next(clip.parameters()).device
             pixel_values = clip_preprocess(image.to(clip_device)).float()
             out = clip(pixel_values=pixel_values)
             neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
-            neg_out = neg_out[2].to(dtype=torch.bfloat16)
-            out = out[2].to(dtype=torch.bfloat16)
+            neg_out = neg_out[2].to(dtype=DTYPE_MODEL)
+            out = out[2].to(dtype=DTYPE_MODEL)
         
         pbar.update(mul)
         if not is_patched:
@@ -710,11 +694,11 @@ class ApplyAdvancedFluxIPAdapter:
 
         #TYANOCHKYBY=16
         ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
-        ip_adapter_flux['ip_adapter_proj_model'].to(dtype=torch.bfloat16)
+        ip_adapter_flux['ip_adapter_proj_model'].to(dtype=DTYPE_MODEL)
         out=torch.mean(out, 0)
         neg_out=torch.mean(neg_out, 0)
-        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
-        ip_neg_pr = ip_adapter_flux['ip_adapter_proj_model'](neg_out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
+        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](out.to(ip_projes_dev, dtype=DTYPE_MODEL)).to(DEVICE, dtype=DTYPE_MODEL)
+        ip_neg_pr = ip_adapter_flux['ip_adapter_proj_model'](neg_out.to(ip_projes_dev, dtype=DTYPE_MODEL)).to(DEVICE, dtype=DTYPE_MODEL)
 
 
         count = len(ip_adapter_flux['double_blocks'])
@@ -737,7 +721,7 @@ class ApplyAdvancedFluxIPAdapter:
             ipad.load_state_dict(block.state_dict())
             ipad.in_hidden_states_neg = ip_neg_pr
             ipad.in_hidden_states_pos = ip_projes
-            ipad.to(dtype=torch.bfloat16)
+            ipad.to(dtype=DTYPE_MODEL)
             npp = DoubleStreamMixerProcessor()
             npp.add_ipadapter(ipad)
             ipad_blocks.append(npp)
@@ -751,7 +735,7 @@ class ApplyAdvancedFluxIPAdapter:
             else:
                 old = None
             processor = merge_loras(old, ipad_blocks[i])
-            processor.to(device, dtype=torch.bfloat16)
+            processor.to(DEVICE, dtype=DTYPE_MODEL)
             bi.add_object_patch(attribute, processor)
             i+=1
         pbar.update(mul)
