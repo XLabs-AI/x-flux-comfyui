@@ -319,12 +319,13 @@ def get_device():
 DEVICE = get_device()
         
 def get_dtype_model():
-         
+    
     # Determine dtype_model based on device capabilities
     if DEVICE.type == 'cuda':
         capability = torch.cuda.get_device_capability(DEVICE)
         if torch.cuda.is_bf16_supported():
-            if is_a100_plus_gpus:
+            is100 = is_a100_plus_gpus()
+            if is100:
                 dtype_model = torch.bfloat16
                 print("Using torch.bfloat16 on CUDA device.")
             else:

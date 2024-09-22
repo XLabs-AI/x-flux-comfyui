@@ -357,7 +357,7 @@ class XlabsSampler:
         bc, c, h, w = latent_image['samples'].shape
         height = (h//2) * 16
         width = (w//2) * 16
-
+        
         x = get_noise(
             bc, height, width, device=DEVICE,
             dtype=DTYPE_MODEL, seed=noise_seed
@@ -367,7 +367,7 @@ class XlabsSampler:
             orig_x=latent_image['samples']
             lat_processor2 = LATENT_PROCESSOR_COMFY()
             orig_x=lat_processor2.go_back(orig_x)
-            orig_x=orig_x.to(DEVICE, dtype=dtype_model)
+            orig_x=orig_x.to(DEVICE, dtype=DTYPE_MODEL)
 
         
         timesteps = get_schedule(
