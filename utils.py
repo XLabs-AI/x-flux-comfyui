@@ -275,3 +275,78 @@ class ControlNetContainer:
         self.controlnet_start_step = controlnet_start_step
         self.controlnet_end_step = controlnet_end_step
         self.controlnet = controlnet
+
+def is_a100_plus_gpus():
+    
+    found = False
+
+    if not torch.cuda.is_available():
+        print("CUDA is not available.")
+        return found
+
+    num_devices = torch.cuda.device_count()
+
+    for i in range(num_devices):
+        device_name = torch.cuda.get_device_name(i)
+        print(f"GPU {i}: {device_name}")
+
+        if any(model in device_name for model in ['A100', 'H100', 'L40', 'RTX 6000 Ada']):
+            found = True
+
+    if found:
+        print("A100 or newer GPU found.")
+    else:
+        print("No A100 or newer GPU found.")
+        
+    return found
+
+
+def get_device():
+    if torch.backends.mps.is_available():
+        # Use Apple Silicon GPU (MPS)
+        device = torch.device('mps')
+        print("Using device: MPS (Apple Silicon GPU)")
+    elif torch.cuda.is_available():
+        # Use NVIDIA GPU (CUDA)
+        device = torch.device('cuda')
+        print("Using device: CUDA (NVIDIA GPU)")
+    else:
+        # Default to CPU
+        device = torch.device('cpu')
+        print("Using device: CPU")
+    return device
+
+DEVICE = get_device()
+        
+def get_dtype_model():
+    
+    # Determine dtype_model based on device capabilities
+    if DEVICE.type == 'cuda':
+        capability = torch.cuda.get_device_capability(DEVICE)
+        if torch.cuda.is_bf16_supported():
+            is100 = is_a100_plus_gpus()
+            if is100:
+                dtype_model = torch.bfloat16
+                print("Using torch.bfloat16 on CUDA device.")
+            else:
+                dtype_model = torch.float16
+                print("Using torch.float16 on CUDA device.")
+        elif capability >= (5, 3):
+            dtype_model = torch.float16
+            print("Using torch.float16 on CUDA device.")
+        else:
+            dtype_model = torch.float32
+            print("Using torch.float32 on CUDA device (no half-precision support).")
+    else:
+        # For CPU
+        try:
+            a = torch.tensor([1.0], dtype=torch.bfloat16)
+            dtype_model = torch.bfloat16
+            print("Using torch.bfloat16 on CPU.")
+        except TypeError:
+            dtype_model = torch.float32
+            print("Using torch.float32 on CPU (bfloat16 not supported).")
+
+    return dtype_model
+
+DTYPE_MODEL=get_dtype_model()
