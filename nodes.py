@@ -526,18 +526,20 @@ class LoadFluxIPAdapter:
             if key.startswith("ip_adapter_proj_model"):
                 proj[key[len("ip_adapter_proj_model."):]] = value
         pbar.update(1)
-        improj = ImageProjModel(4096, 768, 4)
+        img_vec_in_dim=768
+        context_in_dim=4096
+        num_ip_tokens=16        
+        if ckpt['ip_adapter_proj_model.proj.weight'].shape[0]//4096==4:
+            num_ip_tokens=4
+        else:
+            num_ip_tokens=16
+        improj = ImageProjModel(context_in_dim, img_vec_in_dim, num_ip_tokens)
         improj.load_state_dict(proj)
         pbar.update(1)
         ret_ipa["ip_adapter_proj_model"] = improj
 
         ret_ipa["double_blocks"] = torch.nn.ModuleList([IPProcessor(4096, 3072) for i in range(19)])
         ret_ipa["double_blocks"].load_state_dict(blocks)
-        #print("\n"*3)
-        #print(blocks.keys())
-        #print("\n"*3)
-        #print(next(ret_ipa["double_blocks"].parameters()))
-        #print("\n"*3)
         pbar.update(1)
         return (ret_ipa,)
 
@@ -597,7 +599,6 @@ class ApplyFluxIPAdapter:
             neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
             neg_out = neg_out[2].to(dtype=torch.bfloat16)
             out = out[2].to(dtype=torch.bfloat16)
-        
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
