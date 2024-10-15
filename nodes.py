@@ -490,7 +490,7 @@ class LoadFluxIPAdapter:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                "ipadatper": (folder_paths.get_filename_list("xlabs_ipadapters"),),
+                "ipadapter": (folder_paths.get_filename_list("xlabs_ipadapters"),),
                 "clip_vision": (folder_paths.get_filename_list("clip_vision"),),
                 "provider": (["CPU", "GPU",],),
             }
@@ -499,14 +499,13 @@ class LoadFluxIPAdapter:
     RETURN_NAMES = ("ipadapterFlux",)
     FUNCTION = "loadmodel"
     CATEGORY = "XLabsNodes"
-
-    def loadmodel(self, ipadatper, clip_vision, provider):
+    def loadmodel(self, ipadapter, clip_vision, provider):
         pbar = ProgressBar(6)
         device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
         pbar.update(1)
         ret_ipa = {}
-        path = os.path.join(dir_xlabs_ipadapters, ipadatper)
+        path = os.path.join(dir_xlabs_ipadapters, ipadapter)
         ckpt = load_safetensors(path)
         pbar.update(1)
         path_clip = folder_paths.get_full_path("clip_vision", clip_vision)
