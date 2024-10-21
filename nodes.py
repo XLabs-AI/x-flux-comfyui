@@ -19,11 +19,8 @@ from .xflux.src.flux.util import (configs, load_ae, load_clip,
                             load_controlnet)
 
 
-from .utils import (FirstHalfStrengthModel, FluxUpdateModules, LinearStrengthModel, 
-                SecondHalfStrengthModel, SigmoidStrengthModel, attn_processors, 
-                set_attn_processor,
+from .utils import (FluxUpdateModules, attn_processors, set_attn_processor,
                 is_model_pathched, merge_loras, LATENT_PROCESSOR_COMFY,
-                ControlNetContainer,
                 comfy_to_xlabs_lora, check_is_comfy_lora)
 from .layers import (DoubleStreamBlockLoraProcessor,
                      DoubleStreamBlockProcessor,
@@ -236,67 +233,17 @@ class LoadFluxControlNet:
 class ApplyFluxControlNet:
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {
-                    "controlnet": ("FluxControlNet",),
-                    "image": ("IMAGE", ),
-                    "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
-                },
-                "optional": {
-                    "controlnet_condition": ("ControlNetCondition", {"default": None}),
-                }
-        }
+        return {"required": {"controlnet": ("FluxControlNet",),
+                             "image": ("IMAGE", ),
+                             "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01})
+                              }}
 
     RETURN_TYPES = ("ControlNetCondition",)
     RETURN_NAMES = ("controlnet_condition",)
     FUNCTION = "prepare"
     CATEGORY = "XLabsNodes"
 
-    def prepare(self, controlnet, image, strength, controlnet_condition = None):
-        device=mm.get_torch_device()
-        controlnet_image = torch.from_numpy((np.array(image) * 2) - 1)
-        controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(torch.bfloat16).to(device)
-
-        if controlnet_condition is None:
-            ret_cont = [{
-                "img": controlnet_image,
-                "controlnet_strength": strength,
-                "model": controlnet["model"],
-                "start": 0.0,
-                "end": 1.0
-            }]
-        else:
-            ret_cont = controlnet_condition+[{
-                "img": controlnet_image,
-                "controlnet_strength": strength,
-                "model": controlnet["model"],
-                "start": 0.0,
-                "end": 1.0
-            }]
-        return (ret_cont,)
-
-class ApplyAdvancedFluxControlNet:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                    "controlnet": ("FluxControlNet",),
-                    "image": ("IMAGE", ),
-                    "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
-                    "start": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                    "end": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01})
-                },
-                "optional": {
-                    "controlnet_condition": ("ControlNetCondition", {"default": None}),
-                }
-            }
-
-    RETURN_TYPES = ("ControlNetCondition",)
-    RETURN_NAMES = ("controlnet_condition",)
-    FUNCTION = "prepare"
-    CATEGORY = "XLabsNodes"
-
-    def prepare(self, controlnet, image, strength, start, end, controlnet_condition = None):
-
+    def prepare(self, controlnet, image, strength):
         device=mm.get_torch_device()
         controlnet_image = torch.from_numpy((np.array(image) * 2) - 1)
         controlnet_image = controlnet_image.permute(0, 3, 1, 2).to(torch.bfloat16).to(device)
@@ -305,13 +252,7 @@ class ApplyAdvancedFluxControlNet:
             "img": controlnet_image,
             "controlnet_strength": strength,
             "model": controlnet["model"],
-            "start": start,
-            "end": end
         }
-        if controlnet_condition is None:
-            ret_cont = [ret_cont]
-        else:
-            ret_cont = controlnet_condition+[ret_cont]
         return (ret_cont,)
 
 class XlabsSampler:
@@ -327,7 +268,6 @@ class XlabsSampler:
                     "timestep_to_start_cfg": ("INT",  {"default": 20, "min": 0, "max": 100}),
                     "true_gs": ("FLOAT",  {"default": 3, "min": 0, "max": 100}),
                     "image_to_image_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                    "denoise_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                 },
             "optional": {
                     "latent_image": ("LATENT", {"default": None}),
@@ -341,8 +281,7 @@ class XlabsSampler:
 
     def sampling(self, model, conditioning, neg_conditioning,
                  noise_seed, steps, timestep_to_start_cfg, true_gs,
-                 image_to_image_strength, denoise_strength,
-                 latent_image=None, controlnet_condition=None
+                 image_to_image_strength, latent_image=None, controlnet_condition=None
                  ):
         additional_steps = 11 if controlnet_condition is None else 12
         mm.load_model_gpu(model)
@@ -356,20 +295,18 @@ class XlabsSampler:
             guidance = 1.0
 
         device=mm.get_torch_device()
-        if torch.backends.mps.is_available():
-            device = torch.device("mps")
         if torch.cuda.is_bf16_supported():
-            dtype_model = torch.bfloat16
+            dtype_model = torch.bfloat16#
         else:
-            dtype_model = torch.float16
+            dtype_model = torch.float16#
         #dtype_model = torch.bfloat16#model.model.diffusion_model.img_in.weight.dtype
         offload_device=mm.unet_offload_device()
 
         torch.manual_seed(noise_seed)
 
         bc, c, h, w = latent_image['samples'].shape
-        height = (h//2) * 16
-        width = (w//2) * 16
+        height = h * 8
+        width = w * 8
 
         x = get_noise(
             bc, height, width, device=device,
@@ -382,7 +319,6 @@ class XlabsSampler:
             orig_x=lat_processor2.go_back(orig_x)
             orig_x=orig_x.to(device, dtype=dtype_model)
 
-        
         timesteps = get_schedule(
             steps,
             (width // 8) * (height // 8) // 4,
@@ -393,16 +329,10 @@ class XlabsSampler:
         except:
             pass
         x.to(device)
-        
         inmodel.diffusion_model.to(device)
         inp_cond = prepare(conditioning[0][0], conditioning[0][1]['pooled_output'], img=x)
         neg_inp_cond = prepare(neg_conditioning[0][0], neg_conditioning[0][1]['pooled_output'], img=x)
 
-        if denoise_strength<=0.99:
-            try:
-                timesteps=timesteps[:int(len(timesteps)*denoise_strength)]
-            except:
-                pass
         # for sampler preview
         x0_output = {}
         callback = latent_preview.prepare_callback(model, len(timesteps) - 1, x0_output)
@@ -423,56 +353,31 @@ class XlabsSampler:
             )
 
         else:
-            def prepare_controlnet_condition(controlnet_condition):
-                controlnet = controlnet_condition['model']
-                controlnet_image = controlnet_condition['img']
-                controlnet_image = torch.nn.functional.interpolate(
-                    controlnet_image, size=(height, width), scale_factor=None, mode='bicubic',)
-                controlnet_strength = controlnet_condition['controlnet_strength']
-                controlnet_start = controlnet_condition['start']
-                controlnet_end = controlnet_condition['end']
-                controlnet.to(device, dtype=dtype_model)
-                controlnet_image=controlnet_image.to(device, dtype=dtype_model)
-                return {
-                    "img": controlnet_image,
-                    "controlnet_strength": controlnet_strength,
-                    "model": controlnet,
-                    "start": controlnet_start,
-                    "end": controlnet_end,
-                }
 
-
-            cnet_conditions = [prepare_controlnet_condition(el) for el in controlnet_condition]
-            containers = []
-            for el in cnet_conditions:
-                start_step = int(el['start']*len(timesteps))
-                end_step = int(el['end']*len(timesteps))
-                container = ControlNetContainer(el['model'], el['img'], el['controlnet_strength'], start_step, end_step)
-                containers.append(container)
-
+            controlnet = controlnet_condition['model']
+            controlnet_image = controlnet_condition['img']
+            controlnet_image = torch.nn.functional.interpolate(
+                controlnet_image, size=(height, width), scale_factor=None, mode='bicubic',)
+            controlnet_strength = controlnet_condition['controlnet_strength']
+            controlnet.to(device, dtype=dtype_model)
+            controlnet_image=controlnet_image.to(device, dtype=dtype_model)
             mm.load_models_gpu([model,])
             #mm.load_model_gpu(controlnet)
-
-            total_steps = len(timesteps)
-
             x = denoise_controlnet(
-                inmodel.diffusion_model, **inp_cond, 
-                controlnets_container=containers,
+                inmodel.diffusion_model, **inp_cond, controlnet=controlnet,
                 timesteps=timesteps, guidance=guidance,
-                #controlnet_cond=controlnet_image,
+                controlnet_cond=controlnet_image,
                 timestep_to_start_cfg=timestep_to_start_cfg,
                 neg_txt=neg_inp_cond['txt'],
                 neg_txt_ids=neg_inp_cond['txt_ids'],
                 neg_vec=neg_inp_cond['vec'],
                 true_gs=true_gs,
-                #controlnet_gs=controlnet_strength,
+                controlnet_gs=controlnet_strength,
                 image2image_strength=image_to_image_strength,
                 orig_image=orig_x,
                 callback=callback,
                 width=width,
                 height=height,
-                #controlnet_start_step=start_step,
-                #controlnet_end_step=end_step
             )
             #controlnet.to(offload_device)
 
@@ -526,14 +431,7 @@ class LoadFluxIPAdapter:
             if key.startswith("ip_adapter_proj_model"):
                 proj[key[len("ip_adapter_proj_model."):]] = value
         pbar.update(1)
-        img_vec_in_dim=768
-        context_in_dim=4096
-        num_ip_tokens=16        
-        if ckpt['ip_adapter_proj_model.proj.weight'].shape[0]//4096==4:
-            num_ip_tokens=4
-        else:
-            num_ip_tokens=16
-        improj = ImageProjModel(context_in_dim, img_vec_in_dim, num_ip_tokens)
+        improj = ImageProjModel(4096, 768, 16)
         improj.load_state_dict(proj)
         pbar.update(1)
         ret_ipa["ip_adapter_proj_model"] = improj
@@ -551,7 +449,8 @@ class ApplyFluxIPAdapter:
         return {"required": { "model": ("MODEL",),
                               "ip_adapter_flux": ("IP_ADAPTER_FLUX",),
                               "image": ("IMAGE",),
-                              "strength_model": ("FLOAT", {"default": 0.6, "min": -100.0, "max": 100.0, "step": 0.01}),
+                              "ip_scale": ("FLOAT", {"default": 0.92, "min": -100.0, "max": 100.0, "step": 0.01}),
+                              "text_scale": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
                               }}
 
     RETURN_TYPES = ("MODEL",)
@@ -559,10 +458,8 @@ class ApplyFluxIPAdapter:
     FUNCTION = "applymodel"
     CATEGORY = "XLabsNodes"
 
-    def applymodel(self, model, ip_adapter_flux, image, strength_model):
-        debug=False
-
-
+    def applymodel(self, model, ip_adapter_flux, image, ip_scale, text_scale):
+        debug=False        
         device=mm.get_torch_device()
         offload_device=mm.unet_offload_device()
 
@@ -583,22 +480,18 @@ class ApplyFluxIPAdapter:
         clip = ip_adapter_flux['clip_vision']
         
         if isinstance(clip, FluxClipViT):
-            #torch.Size([1, 526, 526, 3])
-            #image = torch.permute(image, (0, ))
-            #print(image.shape)
-            #print(image)
-            clip_device = next(clip.model.parameters()).device
             image = torch.clip(image*255, 0.0, 255)
             out = clip(image).to(dtype=torch.bfloat16)
             neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
+            neg_out = torch.zeros_like(neg_out)
         else:
-            print("Using old vit clip")
-            clip_device = next(clip.parameters()).device
-            pixel_values = clip_preprocess(image.to(clip_device)).float()
+            pixel_values = clip_preprocess(image.to(clip.load_device)).float()
             out = clip(pixel_values=pixel_values)
             neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
             neg_out = neg_out[2].to(dtype=torch.bfloat16)
+            neg_out[2] = torch.zeros_like(neg_out[2])
             out = out[2].to(dtype=torch.bfloat16)
+        
         pbar.update(mul)
         if not is_patched:
             print("We are patching diffusion model, be patient please")
@@ -611,137 +504,28 @@ class ApplyFluxIPAdapter:
         #TYANOCHKYBY=16
         ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
         ip_adapter_flux['ip_adapter_proj_model'].to(dtype=torch.bfloat16)
-        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
-        ip_neg_pr = ip_adapter_flux['ip_adapter_proj_model'](neg_out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
+        
+        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](
+            out.to(ip_projes_dev, dtype=torch.bfloat16)
+        ).to(device, dtype=torch.bfloat16)
+        
+        ip_neg_pr = ip_adapter_flux['ip_adapter_proj_model'](
+            neg_out.to(ip_projes_dev, dtype=torch.bfloat16)
+        ).to(device, dtype=torch.bfloat16)
 
 
         ipad_blocks = []
         for block in ip_adapter_flux['double_blocks']:
-            ipad = IPProcessor(block.context_dim, block.hidden_dim, ip_projes, strength_model)
+            ipad = IPProcessor(block.context_dim, block.hidden_dim, ip_projes, ip_scale)
             ipad.load_state_dict(block.state_dict())
             ipad.in_hidden_states_neg = ip_neg_pr
             ipad.in_hidden_states_pos = ip_projes
             ipad.to(dtype=torch.bfloat16)
             npp = DoubleStreamMixerProcessor()
+            npp.set_text_scale(text_scale)
             npp.add_ipadapter(ipad)
             ipad_blocks.append(npp)
-        pbar.update(mul)
-        i=0
-        for name, _ in attn_processors(tyanochky.diffusion_model).items():
-            attribute = f"diffusion_model.{name}"
-            #old = copy.copy(get_attr(bi.model, attribute))
-            if attribute in model.object_patches.keys():
-                old = copy.copy((model.object_patches[attribute]))
-            else:
-                old = None
-            processor = merge_loras(old, ipad_blocks[i])
-            processor.to(device, dtype=torch.bfloat16)
-            bi.add_object_patch(attribute, processor)
-            i+=1
-        pbar.update(mul)
-        return (bi,)
-
-
-
-class ApplyAdvancedFluxIPAdapter:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {"required": { "model": ("MODEL",),
-                              "ip_adapter_flux": ("IP_ADAPTER_FLUX",),
-                              "image": ("IMAGE",),
-                              "begin_strength": ("FLOAT", {"default": 0.0, "min": -100.0, "max": 100.0, "step": 0.01}),
-                              "end_strength": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
-                              "smothing_type": (["Linear", "First half", "Second half", "Sigmoid"],),
-                              }}
-
-    RETURN_TYPES = ("MODEL",)
-    RETURN_NAMES = ("MODEL",)
-    FUNCTION = "applymodel"
-    CATEGORY = "XLabsNodes"
-
-    def applymodel(self, model, ip_adapter_flux, image, begin_strength, end_strength, smothing_type):
-        debug=False
-
-
-        device=mm.get_torch_device()
-        offload_device=mm.unet_offload_device()
-
-        is_patched = is_model_pathched(model.model)
-
-        print(f"Is model already patched? {is_patched}")
-        mul = 1
-        if is_patched:
-            pbar = ProgressBar(5)
-        else:
-            mul = 3
-            count = len(model.model.diffusion_model.double_blocks)
-            pbar = ProgressBar(5*mul+count)
-
-        bi = model.clone()
-        tyanochky = bi.model
-
-        clip = ip_adapter_flux['clip_vision']
-        
-        if isinstance(clip, FluxClipViT):
-            #torch.Size([1, 526, 526, 3])
-            #image = torch.permute(image, (0, ))
-            #print(image.shape)
-            #print(image)
-            clip_device = next(clip.model.parameters()).device
-            image = torch.clip(image*255, 0.0, 255)
-            out = clip(image).to(dtype=torch.bfloat16)
-            neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
-        else:
-            print("Using old vit clip")
-            clip_device = next(clip.parameters()).device
-            pixel_values = clip_preprocess(image.to(clip_device)).float()
-            out = clip(pixel_values=pixel_values)
-            neg_out = clip(pixel_values=torch.zeros_like(pixel_values))    
-            neg_out = neg_out[2].to(dtype=torch.bfloat16)
-            out = out[2].to(dtype=torch.bfloat16)
-        
-        pbar.update(mul)
-        if not is_patched:
-            print("We are patching diffusion model, be patient please")
-            patches=FluxUpdateModules(tyanochky, pbar)
-            print("Patched succesfully!")
-        else:
-            print("Model already updated")
-        pbar.update(mul)
-
-        #TYANOCHKYBY=16
-        ip_projes_dev = next(ip_adapter_flux['ip_adapter_proj_model'].parameters()).device
-        ip_adapter_flux['ip_adapter_proj_model'].to(dtype=torch.bfloat16)
-        out=torch.mean(out, 0)
-        neg_out=torch.mean(neg_out, 0)
-        ip_projes = ip_adapter_flux['ip_adapter_proj_model'](out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
-        ip_neg_pr = ip_adapter_flux['ip_adapter_proj_model'](neg_out.to(ip_projes_dev, dtype=torch.bfloat16)).to(device, dtype=torch.bfloat16)
-
-
-        count = len(ip_adapter_flux['double_blocks'])
-
-        if smothing_type == "Linear":
-            strength_model = LinearStrengthModel(begin_strength, end_strength, count)
-        elif smothing_type == "First half":
-            strength_model = FirstHalfStrengthModel(begin_strength, end_strength, count)
-        elif smothing_type == "Second half":
-            strength_model = SecondHalfStrengthModel(begin_strength, end_strength, count)
-        elif smothing_type == "Sigmoid":
-            strength_model = SigmoidStrengthModel(begin_strength, end_strength, count)
-        else:
-            raise ValueError("Invalid smothing type")
-
-
-        ipad_blocks = []
-        for i, block in enumerate(ip_adapter_flux['double_blocks']):
-            ipad = IPProcessor(block.context_dim, block.hidden_dim, ip_projes, strength_model[i])
-            ipad.load_state_dict(block.state_dict())
-            ipad.in_hidden_states_neg = ip_neg_pr
-            ipad.in_hidden_states_pos = ip_projes
-            ipad.to(dtype=torch.bfloat16)
-            npp = DoubleStreamMixerProcessor()
-            npp.add_ipadapter(ipad)
-            ipad_blocks.append(npp)
+            
         pbar.update(mul)
         i=0
         for name, _ in attn_processors(tyanochky.diffusion_model).items():
@@ -764,19 +548,15 @@ NODE_CLASS_MAPPINGS = {
     "FluxLoraLoader": LoadFluxLora,
     "LoadFluxControlNet": LoadFluxControlNet,
     "ApplyFluxControlNet": ApplyFluxControlNet,
-    "ApplyAdvancedFluxControlNet": ApplyAdvancedFluxControlNet,
     "XlabsSampler": XlabsSampler,
     "ApplyFluxIPAdapter": ApplyFluxIPAdapter,
     "LoadFluxIPAdapter": LoadFluxIPAdapter,
-    "ApplyAdvancedFluxIPAdapter": ApplyAdvancedFluxIPAdapter,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "FluxLoraLoader": "Load Flux LoRA",
     "LoadFluxControlNet": "Load Flux ControlNet",
     "ApplyFluxControlNet": "Apply Flux ControlNet",
-    "ApplyAdvancedFluxControlNet": "Apply Advanced Flux ControlNet",
     "XlabsSampler": "Xlabs Sampler",
     "ApplyFluxIPAdapter": "Apply Flux IPAdapter",
-    "LoadFluxIPAdapter": "Load Flux IPAdatpter",
-    "ApplyAdvancedFluxIPAdapter": "Apply Advanced Flux IPAdapter",
+    "LoadFluxIPAdapter": "Load Flux IPAdatpter"
 }
