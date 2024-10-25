@@ -306,6 +306,9 @@ class DoubleStreamMixerProcessor(DoubleStreamBlockLorasMixerProcessor):
             x = x*block.text_scale
             x += torch.mean(block(img_qkv, attn), dim=0, keepdim=True)
         return x
+    def scale_txt(self, txt):
+        for block in self.ip_adapters:
+            txt = txt * block.text_scale
     def add_lora(self, processor):
         if isinstance(processor, DoubleStreamBlockLorasMixerProcessor):
             self.qkv_lora1+=processor.qkv_lora1
@@ -382,6 +385,7 @@ class DoubleStreamMixerProcessor(DoubleStreamBlockLorasMixerProcessor):
         
         
         txt = txt + txt_mod2.gate * attn.txt_mlp((1 + txt_mod2.scale) * attn.txt_norm2(txt) + txt_mod2.shift)
+        self.scale_txt(txt)
         self.add_shift(self.proj_lora2, txt, txt_attn, txt_mod1.gate)
 
         return img, txt
