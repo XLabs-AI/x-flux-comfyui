@@ -303,7 +303,7 @@ class DoubleStreamMixerProcessor(DoubleStreamBlockLorasMixerProcessor):
         self.ip_adapters = ip_adapters
     def shift_ip(self, img_qkv, attn, x):
         for block in self.ip_adapters:
-            x = x*block.text_scale
+            #x = x*block.text_scale
             x += torch.mean(block(img_qkv, attn), dim=0, keepdim=True)
         return x
     def scale_txt(self, txt):
