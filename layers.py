@@ -309,6 +309,7 @@ class DoubleStreamMixerProcessor(DoubleStreamBlockLorasMixerProcessor):
     def scale_txt(self, txt):
         for block in self.ip_adapters:
             txt = txt * block.text_scale
+        return txt
     def add_lora(self, processor):
         if isinstance(processor, DoubleStreamBlockLorasMixerProcessor):
             self.qkv_lora1+=processor.qkv_lora1
@@ -378,14 +379,14 @@ class DoubleStreamMixerProcessor(DoubleStreamBlockLorasMixerProcessor):
         img = img + img_mod2.gate * attn.img_mlp((1 + img_mod2.scale) * attn.img_norm2(img) + img_mod2.shift)
 
         
-        self.shift_ip(img_q, attn, img)
+        img = self.shift_ip(img_q, attn, img)
         # calculate the txt bloks
         #txt = txt + txt_mod1.gate * attn.txt_attn.proj(txt_attn) + txt_mod1.gate * self.proj_lora2(txt_attn) * self.lora_weight
         txt = txt + txt_mod1.gate * attn.txt_attn.proj(txt_attn) 
         
         
         txt = txt + txt_mod2.gate * attn.txt_mlp((1 + txt_mod2.scale) * attn.txt_norm2(txt) + txt_mod2.shift)
-        self.scale_txt(txt)
+        txt = self.scale_txt(txt)
         self.add_shift(self.proj_lora2, txt, txt_attn, txt_mod1.gate)
 
         return img, txt
