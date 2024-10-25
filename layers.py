@@ -222,16 +222,18 @@ class DoubleStreamBlockProcessor(nn.Module):
 
 
 class IPProcessor(nn.Module):
-    def __init__(self, context_dim, hidden_dim, ip_hidden_states=None, ip_scale=None):
+    def __init__(self, context_dim, hidden_dim, ip_hidden_states=None, ip_scale=None, text_scale=None):
         super().__init__()
         self.ip_hidden_states = ip_hidden_states
         self.ip_scale = ip_scale
+        self.text_scale = text_scale
         self.in_hidden_states_neg = None
         self.in_hidden_states_pos = ip_hidden_states
         # Ensure context_dim matches the dimension of ip_hidden_states
         self.context_dim = context_dim
         self.hidden_dim = hidden_dim
-
+        if text_scale is None:
+            self.text_scale=1.0
         # Initialize projections for IP-adapter
         self.ip_adapter_double_stream_k_proj = nn.Linear(context_dim, hidden_dim, bias=True)
         self.ip_adapter_double_stream_v_proj = nn.Linear(context_dim, hidden_dim, bias=True)
@@ -301,6 +303,7 @@ class DoubleStreamMixerProcessor(DoubleStreamBlockLorasMixerProcessor):
         self.ip_adapters = ip_adapters
     def shift_ip(self, img_qkv, attn, x):
         for block in self.ip_adapters:
+            x = x*block.text_scale
             x += block(img_qkv, attn)
         return x
     def add_lora(self, processor):
