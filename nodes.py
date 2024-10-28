@@ -736,7 +736,7 @@ class ApplyAdvancedFluxIPAdapter:
 
         ipad_blocks = []
         for i, block in enumerate(ip_adapter_flux['double_blocks']):
-            ipad = IPProcessor(block.context_dim, block.hidden_dim, ip_projes, strength_model[i], text_scale)
+            ipad = IPProcessor(block.context_dim, block.hidden_dim, ip_projes, strength_model[i])
             ipad.load_state_dict(block.state_dict())
             ipad.in_hidden_states_neg = ip_neg_pr
             ipad.in_hidden_states_pos = ip_projes
