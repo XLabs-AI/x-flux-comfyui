@@ -552,7 +552,7 @@ class ApplyFluxIPAdapter:
                               "ip_adapter_flux": ("IP_ADAPTER_FLUX",),
                               "image": ("IMAGE",),
                               "ip_scale": ("FLOAT", {"default": 0.6, "min": -100.0, "max": 100.0, "step": 0.01}),
-                              "text_scale": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
+                              #"text_scale": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
                               }}
 
     RETURN_TYPES = ("MODEL",)
@@ -560,7 +560,7 @@ class ApplyFluxIPAdapter:
     FUNCTION = "applymodel"
     CATEGORY = "XLabsNodes"
 
-    def applymodel(self, model, ip_adapter_flux, image, ip_scale, text_scale):
+    def applymodel(self, model, ip_adapter_flux, image, ip_scale):
         debug=False
 
 
@@ -650,7 +650,7 @@ class ApplyAdvancedFluxIPAdapter:
         return {"required": { "model": ("MODEL",),
                               "ip_adapter_flux": ("IP_ADAPTER_FLUX",),
                               "image": ("IMAGE",),
-                              "text_scale": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
+                              #"text_scale": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
                               "begin_strength": ("FLOAT", {"default": 0.0, "min": -100.0, "max": 100.0, "step": 0.01}),
                               "end_strength": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
                               "smothing_type": (["Linear", "First half", "Second half", "Sigmoid"],),
@@ -661,7 +661,7 @@ class ApplyAdvancedFluxIPAdapter:
     FUNCTION = "applymodel"
     CATEGORY = "XLabsNodes"
 
-    def applymodel(self, model, ip_adapter_flux, image, text_scale, begin_strength, end_strength, smothing_type):
+    def applymodel(self, model, ip_adapter_flux, image, begin_strength, end_strength, smothing_type):
         debug=False
 
 

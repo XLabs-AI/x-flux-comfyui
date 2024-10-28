@@ -234,6 +234,12 @@ class IPProcessor(nn.Module):
         self.hidden_dim = hidden_dim
         if text_scale is None:
             self.text_scale=1.0
+        if self.text_scale is None:
+            self.text_scale=1.0
+        if self.ip_scale is None:
+            self.ip_scale=1.0
+        if self.text_scale == 0:
+            self.text_scale = 0.0001
         # Initialize projections for IP-adapter
         self.ip_adapter_double_stream_k_proj = nn.Linear(context_dim, hidden_dim, bias=True)
         self.ip_adapter_double_stream_v_proj = nn.Linear(context_dim, hidden_dim, bias=True)
@@ -386,7 +392,7 @@ class DoubleStreamMixerProcessor(DoubleStreamBlockLorasMixerProcessor):
         
         
         txt = txt + txt_mod2.gate * attn.txt_mlp((1 + txt_mod2.scale) * attn.txt_norm2(txt) + txt_mod2.shift)
-        txt = self.scale_txt(txt)
+        #txt = self.scale_txt(txt)
         self.add_shift(self.proj_lora2, txt, txt_attn, txt_mod1.gate)
 
         return img, txt
