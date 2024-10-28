@@ -551,7 +551,7 @@ class ApplyFluxIPAdapter:
         return {"required": { "model": ("MODEL",),
                               "ip_adapter_flux": ("IP_ADAPTER_FLUX",),
                               "image": ("IMAGE",),
-                              "ip_scale": ("FLOAT", {"default": 0.6, "min": -100.0, "max": 100.0, "step": 0.01}),
+                              "ip_scale": ("FLOAT", {"default": 0.93, "min": 0.0, "max": 1.0, "step": 0.001}),
                               #"text_scale": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
                               }}
 
