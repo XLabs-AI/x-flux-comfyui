@@ -689,10 +689,14 @@ class ApplyAdvancedFluxIPAdapter:
             #image = torch.permute(image, (0, ))
             #print(image.shape)
             #print(image)
-            clip_device = next(clip.model.parameters()).device
-            image = torch.clip(image*255, 0.0, 255)
+            if isinstance(clip, torch.nn.Module):
+                clip_device = next(clip.parameters()).device
+            else:
+                clip_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            image = torch.clip(image * 255, 0.0, 255)
             out = clip(image).to(dtype=torch.bfloat16)
             neg_out = clip(torch.zeros_like(image)).to(dtype=torch.bfloat16)
+
         else:
             print("Using old vit clip")
             clip_device = next(clip.parameters()).device
