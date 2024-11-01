@@ -42,6 +42,9 @@ You can download them on HuggingFace:
 
 ### Instruction
 1. Update x-flux-comfy with `git pull` or reinstall it.
+```bash
+git clone https://github.com/XLabs-AI/x-flux-comfyui.git
+```
 2. Download Clip-L `model.safetensors` from [OpenAI VIT CLIP large](https://huggingface.co/openai/clip-vit-large-patch14), and put it to `ComfyUI/models/clip_vision/*`.
 3. Download our IPAdapter from [huggingface](https://huggingface.co/XLabs-AI/flux-ip-adapter/tree/main), and put it to `ComfyUI/models/xlabs/ipadapters/*`.
 4. Use `Flux Load IPAdapter` and `Apply Flux IPAdapter` nodes, choose right CLIP model and enjoy your genereations.
