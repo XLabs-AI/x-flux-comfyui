@@ -213,10 +213,13 @@ def denoise(
                 neg_mode = True,
             )
             pred = neg_pred + true_gs * (pred - neg_pred)
+
+        x_0 = img -  t_curr * pred
         img = img + (t_prev - t_curr) * pred
 
         if callback is not None:
-            unpacked = unpack(img.float(), height, width)
+            print("using x_0 for callback")
+            unpacked = unpack(x_0.float(), height, width)
             callback(step=i, x=img, x0=unpacked, total_steps=len(timesteps) - 1)
         i += 1
 
